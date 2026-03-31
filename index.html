@@ -898,7 +898,7 @@
 
 <script>
 // ── STATE ──────────────────────────────────────────────────────────────────
-let API_TOKEN = localStorage.getItem('fine_asana_token') || '';
+let API_TOKEN = 'YOUR_ASANA_TOKEN_HERE'; // <-- REPLACE THIS WITH YOUR TOKEN
 let PROJECT_GID = '1213888401054501';
 let USE_DEMO = false;
 let tasks = [];
@@ -1007,8 +1007,6 @@ async function connectAsana() {
   API_TOKEN = token;
   PROJECT_GID = gid;
   USE_DEMO = false;
-  localStorage.setItem('fine_asana_token', token);
-  localStorage.setItem('fine_project_gid', gid);
   $('config-error').style.display = 'none';
   $('config-screen').style.display = 'none';
   $('dashboard').style.display = 'block';
@@ -1016,13 +1014,9 @@ async function connectAsana() {
   refreshInterval = setInterval(refreshData, 5 * 60 * 1000);
 }
 
-// Auto-connect if token is stored
+// Auto-connect on load
 window.addEventListener('DOMContentLoaded', () => {
-  const savedToken = localStorage.getItem('fine_asana_token');
-  const savedGid = localStorage.getItem('fine_project_gid') || PROJECT_GID;
-  if (savedToken) {
-    API_TOKEN = savedToken;
-    PROJECT_GID = savedGid;
+  if (API_TOKEN && API_TOKEN !== 'YOUR_ASANA_TOKEN_HERE') {
     $('config-screen').style.display = 'none';
     $('dashboard').style.display = 'block';
     refreshData();
