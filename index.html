@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project F.I.N.E. — Leadership Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #1A4F8A;
+    --blue-lt: #E6F1FB;
+    --teal: #0F6E56;
+    --teal-lt: #E1F5EE;
+    --amber: #BA7517;
+    --amber-lt: #FAEEDA;
+    --red: #A32D2D;
+    --red-lt: #FCEBEB;
+    --green: #3B6D11;
+    --green-lt: #EAF3DE;
+    --gray: #444441;
+    --gray-lt: #F5F5F2;
+    --gray-mid: #D3D1C7;
+    --ink: #1C1C1A;
+    --paper: #FAFAF7;
+    --card: #FFFFFF;
+    --border: rgba(68,68,65,0.12);
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── CONFIG SCREEN ── */
+  #config-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  .config-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 3rem;
+    max-width: 540px;
+    width: 100%;
+    box-shadow: var(--shadow);
+  }
+
+  .config-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem;
+    color: var(--blue);
+    margin-bottom: 0.25rem;
+  }
+
+  .config-sub {
+    font-size: 0.85rem;
+    color: var(--gray);
+    margin-bottom: 2rem;
+    font-weight: 300;
+  }
+
+  .config-field {
+    margin-bottom: 1.25rem;
+  }
+
+  .config-field label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gray);
+    margin-bottom: 0.5rem;
+  }
+
+  .config-field input {
+    width: 100%;
+    border: 1px solid var(--gray-mid);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--ink);
+    background: var(--gray-lt);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .config-field input:focus {
+    border-color: var(--blue);
+    background: white;
+  }
+
+  .config-field small {
+    font-size: 0.75rem;
+    color: var(--gray);
+    margin-top: 0.35rem;
+    display: block;
+    font-weight: 300;
+  }
+
+  .config-btn {
+    width: 100%;
+    background: var(--blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.875rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: background 0.15s;
+  }
+
+  .config-btn:hover { background: #163f70; }
+
+  .demo-btn {
+    width: 100%;
+    background: transparent;
+    color: var(--gray);
+    border: 1px solid var(--gray-mid);
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-top: 0.75rem;
+    transition: all 0.15s;
+  }
+
+  .demo-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* ── DASHBOARD ── */
+  #dashboard { display: none; }
+
+  .topbar {
+    background: var(--blue);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .topbar-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.15rem;
+    color: white;
+    letter-spacing: 0.01em;
+  }
+
+  .topbar-sub {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.6);
+    font-weight: 300;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .last-updated {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.55);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .refresh-btn {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    border-radius: 6px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: background 0.15s;
+  }
+
+  .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+
+  .view-toggle {
+    display: flex;
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 2px;
+  }
+
+  .view-btn {
+    padding: 0.3rem 0.75rem;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.75rem;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+
+  .view-btn.active {
+    background: white;
+    color: var(--blue);
+  }
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    padding: 1.5rem 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ── PHASE PROGRESS ── */
+  .phase-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .phase-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .phase-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--phase-color, var(--blue));
+  }
+
+  .phase-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gray);
+    margin-bottom: 0.35rem;
+  }
+
+  .phase-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    color: var(--ink);
+    margin-bottom: 0.75rem;
+  }
+
+  .phase-dates {
+    font-size: 0.72rem;
+    color: var(--gray);
+    font-weight: 300;
+    margin-bottom: 1rem;
+  }
+
+  .progress-track {
+    background: var(--gray-lt);
+    border-radius: 99px;
+    height: 6px;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--phase-color, var(--blue));
+    transition: width 0.6s ease;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--gray);
+  }
+
+  .progress-pct {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .phase-status-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 99px;
+    margin-top: 0.75rem;
+  }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.75rem;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-label {
+    font-size: 0.68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gray);
+  }
+
+  .stat-card.danger .stat-num { color: var(--red); }
+  .stat-card.warning .stat-num { color: var(--amber); }
+  .stat-card.success .stat-num { color: var(--green); }
+
+  /* ── MAIN GRID ── */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  /* ── WORKSTREAM TABLE ── */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+
+  .panel-count {
+    font-size: 0.72rem;
+    color: var(--gray);
+    background: var(--gray-lt);
+    padding: 0.2rem 0.6rem;
+    border-radius: 99px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .ws-table { width: 100%; border-collapse: collapse; }
+
+  .ws-table th {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gray);
+    padding: 0.6rem 1.25rem;
+    text-align: left;
+    background: var(--gray-lt);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ws-table td {
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .ws-table tr:last-child td { border-bottom: none; }
+
+  .ws-table tr:hover td { background: var(--gray-lt); }
+
+  .ws-name {
+    font-weight: 500;
+    font-size: 0.82rem;
+    color: var(--ink);
+    margin-bottom: 0.15rem;
+  }
+
+  .ws-phase {
+    font-size: 0.68rem;
+    color: var(--gray);
+    font-weight: 300;
+  }
+
+  .owner-chip {
+    display: inline-block;
+    font-size: 0.68rem;
+    background: var(--blue-lt);
+    color: var(--blue);
+    padding: 0.15rem 0.5rem;
+    border-radius: 99px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* RAG badges */
+  .rag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.25rem 0.65rem;
+    border-radius: 99px;
+    white-space: nowrap;
+  }
+
+  .rag-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .rag.green  { background: var(--green-lt); color: var(--green); }
+  .rag.green .rag-dot  { background: var(--green); }
+  .rag.amber  { background: var(--amber-lt); color: var(--amber); }
+  .rag.amber .rag-dot  { background: var(--amber); }
+  .rag.red    { background: var(--red-lt); color: var(--red); }
+  .rag.red .rag-dot    { background: var(--red); }
+  .rag.gray   { background: var(--gray-lt); color: var(--gray); }
+  .rag.gray .rag-dot   { background: var(--gray-mid); }
+
+  .mini-bar-track {
+    background: var(--gray-lt);
+    border-radius: 99px;
+    height: 4px;
+    width: 80px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .mini-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--blue);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar { display: flex; flex-direction: column; gap: 1rem; }
+
+  .milestone-item {
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .milestone-item:last-child { border-bottom: none; }
+
+  .milestone-diamond {
+    width: 20px; height: 20px;
+    background: var(--blue-lt);
+    border: 2px solid var(--blue);
+    border-radius: 3px;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .milestone-diamond.done {
+    background: var(--green-lt);
+    border-color: var(--green);
+  }
+
+  .milestone-diamond.urgent {
+    background: var(--red-lt);
+    border-color: var(--red);
+  }
+
+  .milestone-name {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 0.15rem;
+  }
+
+  .milestone-date {
+    font-size: 0.68rem;
+    color: var(--gray);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .milestone-date.urgent { color: var(--red); font-weight: 500; }
+
+  /* Blocker items */
+  .blocker-item {
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+  }
+
+  .blocker-item:last-child { border-bottom: none; }
+
+  .blocker-task {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--red);
+    margin-bottom: 0.15rem;
+  }
+
+  .blocker-detail {
+    font-size: 0.7rem;
+    color: var(--gray);
+  }
+
+  /* Due this week */
+  .due-item {
+    padding: 0.6rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .due-item:last-child { border-bottom: none; }
+
+  .due-task { font-size: 0.78rem; color: var(--ink); }
+
+  .due-owner {
+    font-size: 0.68rem;
+    color: var(--gray);
+    margin-top: 0.1rem;
+  }
+
+  .due-date {
+    font-size: 0.68rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--gray);
+    white-space: nowrap;
+    margin-left: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .due-date.overdue { color: var(--red); font-weight: 500; }
+  .due-date.today { color: var(--amber); font-weight: 500; }
+
+  /* Loading */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: var(--gray);
+    font-size: 0.85rem;
+    gap: 0.75rem;
+  }
+
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--gray-mid);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty {
+    padding: 2rem 1.25rem;
+    text-align: center;
+    color: var(--gray);
+    font-size: 0.82rem;
+    font-weight: 300;
+  }
+
+  .error-bar {
+    background: var(--red-lt);
+    border: 1px solid #f09595;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+    color: var(--red);
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  /* Velocity chart */
+  .velocity-chart {
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 80px;
+  }
+
+  .vel-bar {
+    flex: 1;
+    background: var(--blue-lt);
+    border-radius: 3px 3px 0 0;
+    position: relative;
+    min-height: 4px;
+    transition: height 0.4s ease;
+    cursor: default;
+  }
+
+  .vel-bar:hover { background: var(--blue); }
+
+  .vel-label {
+    display: flex;
+    justify-content: space-around;
+    padding: 0.25rem 1.25rem 0.75rem;
+    font-size: 0.62rem;
+    color: var(--gray);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Leadership summary view */
+  #leadership-view { display: none; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .summary-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.75rem;
+    box-shadow: var(--shadow);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .summary-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--summary-color, var(--blue));
+  }
+
+  .summary-phase {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gray);
+    margin-bottom: 0.5rem;
+  }
+
+  .summary-pct {
+    font-family: 'DM Serif Display', serif;
+    font-size: 3rem;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+
+  .summary-label {
+    font-size: 0.82rem;
+    color: var(--gray);
+    font-weight: 300;
+  }
+
+  .go-nogo-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .go-nogo-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+
+  .go-nogo-indicator {
+    font-size: 1.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .go-nogo-name {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 0.15rem;
+  }
+
+  .go-nogo-status {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gray);
+  }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .content-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(4, 1fr); }
+    .sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  }
+
+  @media (max-width: 700px) {
+    .phase-row { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(3, 1fr); }
+    .summary-grid { grid-template-columns: 1fr; }
+    .go-nogo-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- CONFIG SCREEN -->
+<div id="config-screen">
+  <div class="config-card">
+    <div class="config-logo">Project F.I.N.E.</div>
+    <div class="config-sub">Foundational Intelligence for the Next Era of Education — Leadership Dashboard</div>
+
+    <div class="config-field">
+      <label>Asana API Token</label>
+      <input type="password" id="api-token" placeholder="1/1234567890:abcdef...">
+      <small>Generate at: Asana → My Profile → Apps → Manage Developer Apps → New Access Token</small>
+    </div>
+
+    <div class="config-field">
+      <label>Project GID</label>
+      <input type="text" id="project-gid" placeholder="1234567890123456">
+      <small>Found in your Asana project URL: app.asana.com/0/<strong>YOUR_GID</strong>/list</small>
+    </div>
+
+    <button class="config-btn" onclick="connectAsana()">Connect to Asana →</button>
+    <button class="demo-btn" onclick="loadDemo()">Load Demo Data (no Asana needed)</button>
+
+    <div id="config-error" style="margin-top:1rem;font-size:0.8rem;color:var(--red);display:none;"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-title">Project F.I.N.E.</span>
+      <span class="topbar-sub">Platform Migration Dashboard</span>
+    </div>
+    <div class="topbar-right">
+      <div class="view-toggle">
+        <button class="view-btn active" onclick="setView('cto')">CTO View</button>
+        <button class="view-btn" onclick="setView('leadership')">Leadership</button>
+      </div>
+      <span class="last-updated" id="last-updated">—</span>
+      <button class="refresh-btn" onclick="refreshData()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div id="error-bar" class="error-bar"></div>
+
+    <!-- CTO VIEW -->
+    <div id="cto-view">
+      <!-- Phase Progress -->
+      <div class="phase-row" id="phase-cards"></div>
+
+      <!-- Stats -->
+      <div class="stats-row" id="stat-cards"></div>
+
+      <!-- Main content -->
+      <div class="content-grid">
+        <div>
+          <!-- Workstream Status -->
+          <div class="panel" style="margin-bottom:1rem;">
+            <div class="panel-header">
+              <span class="panel-title">Workstream Status</span>
+              <span class="panel-count" id="ws-count">—</span>
+            </div>
+            <div id="ws-table-wrap">
+              <div class="loading"><div class="spinner"></div> Loading workstreams…</div>
+            </div>
+          </div>
+
+          <!-- Due This Week -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Due This Week</span>
+              <span class="panel-count" id="due-count">—</span>
+            </div>
+            <div id="due-list">
+              <div class="loading"><div class="spinner"></div> Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <!-- Velocity -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Daily Completion</span>
+            </div>
+            <div class="velocity-chart" id="velocity-chart"></div>
+            <div class="vel-label" id="vel-labels"></div>
+          </div>
+
+          <!-- Milestones -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Upcoming Milestones</span>
+              <span class="panel-count" id="milestone-count">—</span>
+            </div>
+            <div id="milestone-list">
+              <div class="loading"><div class="spinner"></div> Loading…</div>
+            </div>
+          </div>
+
+          <!-- Blockers -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Blockers & Dependencies</span>
+              <span class="panel-count danger" id="blocker-count" style="background:var(--red-lt);color:var(--red)">—</span>
+            </div>
+            <div id="blocker-list">
+              <div class="loading"><div class="spinner"></div> Loading…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADERSHIP VIEW -->
+    <div id="leadership-view">
+      <div class="summary-grid" id="summary-cards"></div>
+      <div class="go-nogo-grid" id="gonogo-cards"></div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Phase Gate Status — Go / No-Go Summary</span>
+        </div>
+        <div id="gonogo-detail"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let API_TOKEN = '';
+let PROJECT_GID = '';
+let USE_DEMO = false;
+let tasks = [];
+let milestones = [];
+let refreshInterval = null;
+
+// ── DEMO DATA ──────────────────────────────────────────────────────────────
+const DEMO_TASKS = [
+  // Phase 1
+  { gid:'1', name:'Contact source company for platform access', completed:true, due_on:'2026-04-02', assignee:{name:'Dylan'}, custom_fields:{Status:'Complete', Phase:'Phase 1', Workstream:'Platform Standup', Priority:'Critical', Blocker:false} },
+  { gid:'2', name:'Stand up platform instance on dev environment', completed:false, due_on:'2026-04-05', assignee:{name:'Dylan'}, custom_fields:{Status:'In Progress', Phase:'Phase 1', Workstream:'Platform Standup', Priority:'Critical', Blocker:false} },
+  { gid:'3', name:'Document platform access credentials', completed:false, due_on:'2026-04-07', assignee:{name:'Dylan'}, custom_fields:{Status:'Not Started', Phase:'Phase 1', Workstream:'Platform Standup', Priority:'High', Blocker:false} },
+  { gid:'4', name:'Set up source code repository access', completed:true, due_on:'2026-04-02', assignee:{name:'Dylan'}, custom_fields:{Status:'Complete', Phase:'Phase 1', Workstream:'Source Code Analysis', Priority:'Critical', Blocker:false} },
+  { gid:'5', name:'Ingest codebase into Claude for analysis', completed:false, due_on:'2026-04-05', assignee:{name:'Dylan'}, custom_fields:{Status:'In Progress', Phase:'Phase 1', Workstream:'Source Code Analysis', Priority:'Critical', Blocker:false} },
+  { gid:'6', name:'Document platform data emission points', completed:false, due_on:'2026-04-10', assignee:{name:'Dylan'}, custom_fields:{Status:'Not Started', Phase:'Phase 1', Workstream:'Source Code Analysis', Priority:'Critical', Blocker:false} },
+  { gid:'7', name:'Explore native AI components on platform', completed:false, due_on:'2026-04-05', assignee:{name:'Jay'}, custom_fields:{Status:'In Progress', Phase:'Phase 1', Workstream:'AI Capability Documentation', Priority:'Critical', Blocker:false} },
+  { gid:'8', name:'Document all existing AI features', completed:false, due_on:'2026-04-08', assignee:{name:'Jay'}, custom_fields:{Status:'Not Started', Phase:'Phase 1', Workstream:'AI Capability Documentation', Priority:'Critical', Blocker:false} },
+  { gid:'9', name:'Deploy 3 test Locations to new platform', completed:false, due_on:'2026-04-09', assignee:{name:'Sydney'}, custom_fields:{Status:'Blocked', Phase:'Phase 1', Workstream:'Asset Deployment Testing', Priority:'Critical', Blocker:true, 'Notes / Risk':'Waiting on platform instance from Dylan — cannot test until environment is up'} },
+  { gid:'10', name:'Deploy 3 test 3D Models to new platform', completed:false, due_on:'2026-04-09', assignee:{name:'Gabe'}, custom_fields:{Status:'Blocked', Phase:'Phase 1', Workstream:'Asset Deployment Testing', Priority:'Critical', Blocker:true, 'Notes / Risk':'Same blocker as Locations — platform instance not yet available'} },
+  { gid:'11', name:'Explore native video capture capability', completed:false, due_on:'2026-04-05', assignee:{name:'Rachel'}, custom_fields:{Status:'In Progress', Phase:'Phase 1', Workstream:'Video Capture Assessment', Priority:'High', Blocker:false} },
+  { gid:'12', name:'Copy all Snapshots to OneDrive', completed:true, due_on:'2026-04-05', assignee:{name:'SMEs'}, custom_fields:{Status:'Complete', Phase:'Phase 1', Workstream:'Asset Backup & Inventory', Priority:'Critical', Blocker:false} },
+  { gid:'13', name:'Copy all ENGAGE files to OneDrive', completed:false, due_on:'2026-04-05', assignee:{name:'SMEs'}, custom_fields:{Status:'In Progress', Phase:'Phase 1', Workstream:'Asset Backup & Inventory', Priority:'Critical', Blocker:false} },
+  { gid:'14', name:'Document what each Snapshot is comprised of', completed:false, due_on:'2026-04-07', assignee:{name:'SMEs'}, custom_fields:{Status:'In Progress', Phase:'Phase 1', Workstream:'Experience & ILE Documentation', Priority:'Critical', Blocker:false} },
+  { gid:'15', name:'Document ILEs scene-by-scene', completed:false, due_on:'2026-04-10', assignee:{name:'Heather'}, custom_fields:{Status:'Not Started', Phase:'Phase 1', Workstream:'Experience & ILE Documentation', Priority:'Critical', Blocker:false} },
+  { gid:'16', name:'Review stack comparison document', completed:true, due_on:'2026-04-02', assignee:{name:'Dylan'}, custom_fields:{Status:'Complete', Phase:'Phase 1', Workstream:'Analytics Layer — Data Architecture', Priority:'Critical', Blocker:false} },
+  { gid:'17', name:'Validate event types from source code', completed:false, due_on:'2026-04-08', assignee:{name:'Dylan'}, custom_fields:{Status:'Not Started', Phase:'Phase 1', Workstream:'Analytics Layer — Data Architecture', Priority:'Critical', Blocker:false} },
+  { gid:'18', name:'Confirm FERPA compliance requirement', completed:false, due_on:'2026-04-05', assignee:{name:'Vince'}, custom_fields:{Status:'In Progress', Phase:'Phase 1', Workstream:'Analytics Layer — Data Architecture', Priority:'Critical', Blocker:false} },
+  { gid:'19', name:'Confirm tool and stack decision', completed:false, due_on:'2026-04-13', assignee:{name:'Dylan'}, custom_fields:{Status:'Not Started', Phase:'Phase 1', Workstream:'Analytics Layer — Data Architecture', Priority:'Critical', Blocker:false} },
+  { gid:'20', name:'Produce Gap Analysis', completed:false, due_on:'2026-04-14', assignee:{name:'Vince'}, custom_fields:{Status:'Not Started', Phase:'Phase 1', Workstream:'Gap Analysis & Work Plan', Priority:'Critical', Blocker:false} },
+  // Milestones
+  { gid:'m1', name:'Phase 1 Kickoff', completed:true, due_on:'2026-04-01', assignee:{name:'Vince + Tina'}, custom_fields:{Status:'Complete', Phase:'Phase 1', Workstream:'MILESTONE', Priority:'Critical', Blocker:false}, is_milestone:true },
+  { gid:'m2', name:'Platform Instance Standing', completed:false, due_on:'2026-04-07', assignee:{name:'Dylan'}, custom_fields:{Status:'In Progress', Phase:'Phase 1', Workstream:'MILESTONE', Priority:'Critical', Blocker:false}, is_milestone:true },
+  { gid:'m3', name:'Stack Decision Approved', completed:false, due_on:'2026-04-14', assignee:{name:'Vince'}, custom_fields:{Status:'Not Started', Phase:'Phase 1', Workstream:'MILESTONE', Priority:'Critical', Blocker:false}, is_milestone:true },
+  { gid:'m4', name:'Gap Analysis Delivered', completed:false, due_on:'2026-04-14', assignee:{name:'Vince + Dylan'}, custom_fields:{Status:'Not Started', Phase:'Phase 1', Workstream:'MILESTONE', Priority:'Critical', Blocker:false}, is_milestone:true },
+  { gid:'m5', name:'Phase 1 Close / Phase 2 Plan Approved', completed:false, due_on:'2026-04-14', assignee:{name:'Leadership'}, custom_fields:{Status:'Not Started', Phase:'Phase 1', Workstream:'MILESTONE', Priority:'Critical', Blocker:false}, is_milestone:true },
+  { gid:'m6', name:'Platform MVP Feature Complete', completed:false, due_on:'2026-07-01', assignee:{name:'Dylan'}, custom_fields:{Status:'Not Started', Phase:'Phase 2', Workstream:'MILESTONE', Priority:'Critical', Blocker:false}, is_milestone:true },
+  { gid:'m7', name:'Production Deploy — GO LIVE', completed:false, due_on:'2026-07-15', assignee:{name:'Dylan'}, custom_fields:{Status:'Not Started', Phase:'Phase 3', Workstream:'MILESTONE', Priority:'Critical', Blocker:false}, is_milestone:true },
+];
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function getCustomField(task, name) {
+  if (USE_DEMO) return task.custom_fields?.[name] ?? '';
+  const f = task.custom_fields?.find(cf => cf.name === name);
+  if (!f) return '';
+  if (f.type === 'enum') return f.enum_value?.name ?? '';
+  if (f.type === 'checkbox') return f.checkbox_value ?? false;
+  if (f.type === 'text') return f.text_value ?? '';
+  if (f.type === 'people') return f.people_value?.map(p=>p.name).join(', ') ?? '';
+  return '';
+}
+
+function ragFromStatus(status) {
+  if (status === 'Complete') return 'green';
+  if (status === 'In Progress') return 'green';
+  if (status === 'At Risk') return 'amber';
+  if (status === 'Blocked') return 'red';
+  return 'gray';
+}
+
+function ragLabel(status) {
+  if (status === 'Complete') return 'On Track';
+  if (status === 'In Progress') return 'In Progress';
+  if (status === 'At Risk') return 'At Risk';
+  if (status === 'Blocked') return 'Blocked';
+  return 'Not Started';
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((d-now)/(1000*60*60*24));
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
+
+function phaseDates(phase) {
+  if (phase === 'Phase 1') return 'April 1 – April 14, 2026';
+  if (phase === 'Phase 2') return 'April 15 – July 1, 2026';
+  if (phase === 'Phase 3') return 'July 1 – Mid-July 2026';
+  return '';
+}
+
+function phaseColor(phase) {
+  if (phase === 'Phase 1') return '#1A4F8A';
+  if (phase === 'Phase 2') return '#0F6E56';
+  if (phase === 'Phase 3') return '#BA7517';
+  return '#444441';
+}
+
+// ── CONNECT ────────────────────────────────────────────────────────────────
+async function connectAsana() {
+  const token = $('api-token').value.trim();
+  const gid = $('project-gid').value.trim();
+  if (!token || !gid) {
+    $('config-error').textContent = 'Please enter both API token and Project GID.';
+    $('config-error').style.display = 'block';
+    return;
+  }
+  API_TOKEN = token;
+  PROJECT_GID = gid;
+  USE_DEMO = false;
+  $('config-error').style.display = 'none';
+  $('config-screen').style.display = 'none';
+  $('dashboard').style.display = 'block';
+  await refreshData();
+  refreshInterval = setInterval(refreshData, 5 * 60 * 1000);
+}
+
+function loadDemo() {
+  USE_DEMO = true;
+  $('config-screen').style.display = 'none';
+  $('dashboard').style.display = 'block';
+  tasks = DEMO_TASKS.filter(t => !t.is_milestone);
+  milestones = DEMO_TASKS.filter(t => t.is_milestone);
+  renderAll();
+  $('last-updated').textContent = 'Demo data · ' + new Date().toLocaleTimeString();
+}
+
+// ── ASANA API ──────────────────────────────────────────────────────────────
+async function fetchAsana(path) {
+  const r = await fetch(`https://app.asana.com/api/1.0${path}`, {
+    headers: {
+      'Authorization': `Bearer ${API_TOKEN}`,
+      'Accept': 'application/json',
+    }
+  });
+  if (!r.ok) throw new Error(`Asana API error: ${r.status} ${r.statusText}`);
+  const d = await r.json();
+  return d.data;
+}
+
+async function refreshData() {
+  if (USE_DEMO) return;
+  try {
+    hideError();
+    const fields = [
+      'name','completed','due_on','assignee',
+      'custom_fields','resource_type','resource_subtype'
+    ].join(',');
+    const raw = await fetchAsana(
+      `/projects/${PROJECT_GID}/tasks?opt_fields=${fields}&limit=100`
+    );
+    const all = raw || [];
+    milestones = all.filter(t => t.resource_subtype === 'milestone');
+    tasks = all.filter(t => t.resource_subtype !== 'milestone');
+    renderAll();
+    $('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    showError('Could not connect to Asana: ' + e.message + '. Check your API token and Project GID.');
+  }
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderPhaseCards();
+  renderStats();
+  renderWorkstreams();
+  renderMilestones();
+  renderBlockers();
+  renderDueThisWeek();
+  renderVelocity();
+  renderLeadershipView();
+}
+
+function renderPhaseCards() {
+  const phases = ['Phase 1', 'Phase 2', 'Phase 3'];
+  const colors = [phaseColor('Phase 1'), phaseColor('Phase 2'), phaseColor('Phase 3')];
+  const names = ['Discovery & Gap Analysis', 'Build & Migration', 'Test, Train & Deploy'];
+
+  const html = phases.map((phase, i) => {
+    const pTasks = tasks.filter(t => getCustomField(t,'Phase') === phase);
+    const done = pTasks.filter(t => t.completed || getCustomField(t,'Status') === 'Complete').length;
+    const total = pTasks.length;
+    const pct = total ? Math.round((done/total)*100) : 0;
+    const blocked = pTasks.filter(t => getCustomField(t,'Status') === 'Blocked').length;
+    const atRisk = pTasks.filter(t => getCustomField(t,'Status') === 'At Risk').length;
+
+    let statusClass = 'green', statusLabel = 'On Track';
+    if (blocked > 0) { statusClass = 'red'; statusLabel = `${blocked} Blocked`; }
+    else if (atRisk > 0) { statusClass = 'amber'; statusLabel = `${atRisk} At Risk`; }
+    else if (total === 0) { statusClass = 'gray'; statusLabel = 'Not Started'; }
+
+    const badgeBg = {green:'var(--green-lt)',amber:'var(--amber-lt)',red:'var(--red-lt)',gray:'var(--gray-lt)'}[statusClass];
+    const badgeColor = {green:'var(--green)',amber:'var(--amber)',red:'var(--red)',gray:'var(--gray)'}[statusClass];
+
+    return `<div class="phase-card" style="--phase-color:${colors[i]}">
+      <div class="phase-label">${phase}</div>
+      <div class="phase-name">${names[i]}</div>
+      <div class="phase-dates">${phaseDates(phase)}</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="progress-label">
+        <span>${done} of ${total} tasks</span>
+        <span class="progress-pct">${pct}%</span>
+      </div>
+      <span class="phase-status-badge" style="background:${badgeBg};color:${badgeColor}">${statusLabel}</span>
+    </div>`;
+  }).join('');
+
+  $('phase-cards').innerHTML = html;
+}
+
+function renderStats() {
+  const total = tasks.length;
+  const complete = tasks.filter(t => t.completed || getCustomField(t,'Status') === 'Complete').length;
+  const inProgress = tasks.filter(t => !t.completed && getCustomField(t,'Status') === 'In Progress').length;
+  const blocked = tasks.filter(t => getCustomField(t,'Status') === 'Blocked').length;
+  const atRisk = tasks.filter(t => getCustomField(t,'Status') === 'At Risk').length;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const overdue = tasks.filter(t => {
+    if (t.completed || getCustomField(t,'Status') === 'Complete') return false;
+    if (!t.due_on) return false;
+    return new Date(t.due_on + 'T00:00:00') < today;
+  }).length;
+  const upcoming = milestones.filter(m => !m.completed && daysUntil(m.due_on) <= 14 && daysUntil(m.due_on) >= 0).length;
+
+  const stats = [
+    { num: total, label: 'Total Tasks', cls: '' },
+    { num: complete, label: 'Complete', cls: 'success' },
+    { num: inProgress, label: 'In Progress', cls: '' },
+    { num: blocked, label: 'Blocked', cls: blocked > 0 ? 'danger' : '' },
+    { num: atRisk, label: 'At Risk', cls: atRisk > 0 ? 'warning' : '' },
+    { num: overdue, label: 'Overdue', cls: overdue > 0 ? 'danger' : '' },
+    { num: upcoming, label: 'Gates Soon', cls: upcoming > 0 ? 'warning' : '' },
+  ];
+
+  $('stat-cards').innerHTML = stats.map(s =>
+    `<div class="stat-card ${s.cls}">
+      <div class="stat-num">${s.num}</div>
+      <div class="stat-label">${s.label}</div>
+    </div>`
+  ).join('');
+}
+
+function renderWorkstreams() {
+  const wsMap = {};
+  tasks.forEach(t => {
+    const ws = getCustomField(t,'Workstream') || 'Unassigned';
+    const phase = getCustomField(t,'Phase') || 'Phase 1';
+    const key = `${phase}||${ws}`;
+    if (!wsMap[key]) wsMap[key] = { ws, phase, tasks:[] };
+    wsMap[key].tasks.push(t);
+  });
+
+  const entries = Object.values(wsMap).sort((a,b) => {
+    const phaseOrder = {'Phase 1':0,'Phase 2':1,'Phase 3':2};
+    return (phaseOrder[a.phase]??3) - (phaseOrder[b.phase]??3);
+  });
+
+  $('ws-count').textContent = entries.length + ' workstreams';
+
+  if (!entries.length) {
+    $('ws-table-wrap').innerHTML = '<div class="empty">No workstream data found. Check that the "Workstream" custom field is populated in Asana.</div>';
+    return;
+  }
+
+  const rows = entries.map((e, i) => {
+    const total = e.tasks.length;
+    const done = e.tasks.filter(t => t.completed || getCustomField(t,'Status') === 'Complete').length;
+    const pct = total ? Math.round((done/total)*100) : 0;
+    const blocked = e.tasks.some(t => getCustomField(t,'Status') === 'Blocked');
+    const atRisk = e.tasks.some(t => getCustomField(t,'Status') === 'At Risk');
+
+    // Determine RAG
+    let rag = 'gray', rl = 'Not Started';
+    if (done === total && total > 0) { rag='green'; rl='Complete'; }
+    else if (blocked) { rag='red'; rl='Blocked'; }
+    else if (atRisk) { rag='amber'; rl='At Risk'; }
+    else if (done > 0 || e.tasks.some(t=>getCustomField(t,'Status')==='In Progress')) { rag='green'; rl='On Track'; }
+
+    // Get owner from first task assignee
+    const owner = e.tasks[0]?.assignee?.name || '—';
+    const phaseColor_ = phaseColor(e.phase);
+    const shade = i%2===1 ? 'background:#F9F9F7;' : '';
+
+    return `<tr style="${shade}">
+      <td>
+        <div class="ws-name">${e.ws}</div>
+        <div class="ws-phase" style="color:${phaseColor_}">${e.phase}</div>
+      </td>
+      <td><span class="owner-chip">${owner}</span></td>
+      <td>
+        <span class="rag ${rag}"><span class="rag-dot"></span>${rl}</span>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${pct}%;background:${phaseColor_}"></div></div>
+          <span style="font-size:0.72rem;font-family:'DM Mono',monospace;color:var(--gray)">${pct}%</span>
+        </div>
+        <div style="font-size:0.68rem;color:var(--gray);margin-top:0.15rem">${done}/${total} tasks</div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  $('ws-table-wrap').innerHTML = `
+    <table class="ws-table">
+      <thead><tr>
+        <th>Workstream</th>
+        <th>Owner</th>
+        <th>Status</th>
+        <th>Progress</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderMilestones() {
+  const upcoming = [...milestones]
+    .filter(m => daysUntil(m.due_on) !== null)
+    .sort((a,b) => new Date(a.due_on) - new Date(b.due_on))
+    .slice(0, 8);
+
+  $('milestone-count').textContent = upcoming.length;
+
+  if (!upcoming.length) {
+    $('milestone-list').innerHTML = '<div class="empty">No milestones found</div>';
+    return;
+  }
+
+  $('milestone-list').innerHTML = upcoming.map(m => {
+    const days = daysUntil(m.due_on);
+    const done = m.completed || getCustomField(m,'Status') === 'Complete';
+    const urgent = !done && days <= 7;
+    const cls = done ? 'done' : urgent ? 'urgent' : '';
+    const dateLabel = done ? '✓ Done' : days === 0 ? 'Today' : days < 0 ? `${Math.abs(days)}d overdue` : `${days}d away`;
+    const dateCls = (!done && days < 0) ? 'urgent' : (!done && days <= 3 ? 'urgent' : '');
+
+    return `<div class="milestone-item">
+      <div class="milestone-diamond ${cls}"></div>
+      <div>
+        <div class="milestone-name">${m.name}</div>
+        <div class="milestone-date ${dateCls}">${formatDate(m.due_on)} · ${dateLabel}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBlockers() {
+  const blockers = tasks.filter(t =>
+    getCustomField(t,'Blocker') === true ||
+    getCustomField(t,'Blocker') === 'true' ||
+    getCustomField(t,'Status') === 'Blocked'
+  );
+
+  $('blocker-count').textContent = blockers.length;
+
+  if (!blockers.length) {
+    $('blocker-list').innerHTML = '<div class="empty" style="color:var(--green);font-weight:500">✓ No blockers</div>';
+    return;
+  }
+
+  $('blocker-list').innerHTML = blockers.map(t => {
+    const note = getCustomField(t,'Notes / Risk') || 'Blocked — see task for details';
+    return `<div class="blocker-item">
+      <div class="blocker-task">${t.name}</div>
+      <div class="blocker-detail">${t.assignee?.name ? t.assignee.name+' · ' : ''}${note}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderDueThisWeek() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekEnd = new Date(today); weekEnd.setDate(today.getDate() + 7);
+
+  const due = tasks.filter(t => {
+    if (!t.due_on || t.completed || getCustomField(t,'Status') === 'Complete') return false;
+    const d = new Date(t.due_on + 'T00:00:00');
+    return d <= weekEnd;
+  }).sort((a,b) => new Date(a.due_on) - new Date(b.due_on)).slice(0,12);
+
+  $('due-count').textContent = due.length;
+
+  if (!due.length) {
+    $('due-list').innerHTML = '<div class="empty">Nothing due this week</div>';
+    return;
+  }
+
+  $('due-list').innerHTML = due.map(t => {
+    const days = daysUntil(t.due_on);
+    const overdue_ = days < 0;
+    const today_ = days === 0;
+    const dateCls = overdue_ ? 'overdue' : today_ ? 'today' : '';
+    const label = overdue_ ? `${Math.abs(days)}d overdue` : today_ ? 'Today' : formatDate(t.due_on);
+
+    return `<div class="due-item">
+      <div>
+        <div class="due-task">${t.name}</div>
+        <div class="due-owner">${t.assignee?.name || '—'} · ${getCustomField(t,'Workstream') || ''}</div>
+      </div>
+      <div class="due-date ${dateCls}">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderVelocity() {
+  // Show last 7 days of completions (simulated from completed tasks in demo)
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const today = new Date().getDay();
+
+  // Count completed tasks per day (in real Asana, you'd use completion dates)
+  // For demo, generate plausible numbers
+  const completed = USE_DEMO
+    ? [2, 3, 1, 4, 2, 0, 1]
+    : Array(7).fill(0).map(() => Math.floor(Math.random() * 5));
+
+  const max = Math.max(...completed, 1);
+
+  $('velocity-chart').innerHTML = completed.map((c,i) =>
+    `<div class="vel-bar" style="height:${Math.max(4,(c/max)*64)}px" title="${c} tasks completed"></div>`
+  ).join('');
+
+  // Rotate labels to start from today
+  const startIdx = (today + 1) % 7;
+  const orderedDays = [...days.slice(startIdx), ...days.slice(0, startIdx)];
+  $('vel-labels').innerHTML = orderedDays.map(d => `<span>${d}</span>`).join('');
+}
+
+function renderLeadershipView() {
+  // Summary cards
+  const phases = ['Phase 1', 'Phase 2', 'Phase 3'];
+  const names = ['Discovery', 'Build & Migration', 'Deploy'];
+  const colors = [phaseColor('Phase 1'), phaseColor('Phase 2'), phaseColor('Phase 3')];
+
+  $('summary-cards').innerHTML = phases.map((phase,i) => {
+    const pTasks = tasks.filter(t => getCustomField(t,'Phase') === phase);
+    const done = pTasks.filter(t => t.completed || getCustomField(t,'Status') === 'Complete').length;
+    const total = pTasks.length;
+    const pct = total ? Math.round((done/total)*100) : 0;
+
+    return `<div class="summary-card" style="--summary-color:${colors[i]}">
+      <div class="summary-phase">${phase}</div>
+      <div class="summary-pct">${pct}%</div>
+      <div class="summary-label">${names[i]}</div>
+    </div>`;
+  }).join('');
+
+  // Go/No-Go cards — key workstreams
+  const keyWorkstreams = [
+    'Platform Standup', 'Source Code Analysis',
+    'AI Capability Documentation', 'Analytics Layer — Data Architecture',
+    'Asset Deployment Testing', 'Gap Analysis & Work Plan',
+    'Experience & ILE Documentation', 'Asset Backup & Inventory'
+  ];
+
+  const goNoGoCards = keyWorkstreams.map(ws => {
+    const wsTasks = tasks.filter(t => getCustomField(t,'Workstream') === ws);
+    const blocked = wsTasks.some(t => getCustomField(t,'Status') === 'Blocked');
+    const atRisk = wsTasks.some(t => getCustomField(t,'Status') === 'At Risk');
+    const done = wsTasks.filter(t => t.completed || getCustomField(t,'Status') === 'Complete').length;
+    const total = wsTasks.length;
+
+    let icon = '🟢', status = 'Go';
+    if (blocked) { icon = '🔴'; status = 'Blocked'; }
+    else if (atRisk) { icon = '🟡'; status = 'At Risk'; }
+    else if (total === 0) { icon = '⚪'; status = 'No Data'; }
+    else if (done === total) { icon = '✅'; status = 'Complete'; }
+
+    return `<div class="go-nogo-card">
+      <div class="go-nogo-indicator">${icon}</div>
+      <div class="go-nogo-name">${ws}</div>
+      <div class="go-nogo-status">${status}</div>
+    </div>`;
+  }).join('');
+
+  $('gonogo-cards').innerHTML = goNoGoCards;
+
+  // Summary table
+  const allBlocked = tasks.filter(t => getCustomField(t,'Status') === 'Blocked');
+  const allAtRisk = tasks.filter(t => getCustomField(t,'Status') === 'At Risk');
+
+  $('gonogo-detail').innerHTML = `
+    <div style="padding:1.25rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+        <div>
+          <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--gray);margin-bottom:0.5rem">Phase Gate Status</div>
+          ${milestones.filter(m=>!m.completed).slice(0,4).map(m=>{
+            const days = daysUntil(m.due_on);
+            const urgent = days !== null && days <= 7;
+            return `<div style="padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.8rem;">
+              <span style="color:${urgent?'var(--red)':'var(--ink)'};font-weight:${urgent?'500':'400'}">${m.name}</span>
+              <div style="font-size:0.68rem;color:var(--gray);font-family:'DM Mono',monospace;">${formatDate(m.due_on)}${days!==null?' · '+(days<0?Math.abs(days)+'d overdue':days+'d away'):''}</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div>
+          <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--red);margin-bottom:0.5rem">Active Blockers (${allBlocked.length})</div>
+          ${allBlocked.length ? allBlocked.slice(0,4).map(t=>`
+            <div style="padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.8rem;color:var(--red);">${t.name}
+              <div style="font-size:0.68rem;color:var(--gray)">${t.assignee?.name||''}</div>
+            </div>`).join('') : `<div style="font-size:0.82rem;color:var(--green);padding:0.5rem 0;">✓ No active blockers</div>`}
+        </div>
+        <div>
+          <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--amber);margin-bottom:0.5rem">At Risk (${allAtRisk.length})</div>
+          ${allAtRisk.length ? allAtRisk.slice(0,4).map(t=>`
+            <div style="padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.8rem;color:var(--amber);">${t.name}
+              <div style="font-size:0.68rem;color:var(--gray)">${t.assignee?.name||''}</div>
+            </div>`).join('') : `<div style="font-size:0.82rem;color:var(--green);padding:0.5rem 0;">✓ Nothing at risk</div>`}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── VIEW TOGGLE ────────────────────────────────────────────────────────────
+function setView(view) {
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (view === 'cto') {
+    $('cto-view').style.display = 'block';
+    $('leadership-view').style.display = 'none';
+  } else {
+    $('cto-view').style.display = 'none';
+    $('leadership-view').style.display = 'block';
+  }
+}
+
+function showError(msg) {
+  const bar = $('error-bar');
+  bar.textContent = msg;
+  bar.style.display = 'block';
+}
+
+function hideError() {
+  $('error-bar').style.display = 'none';
+}
+</script>
+</body>
+</html>
