@@ -771,22 +771,21 @@
 <div id="config-screen">
   <div class="config-card">
     <div class="config-logo">Project F.I.N.E.</div>
-    <div class="config-sub">Foundational Intelligence for the Next Era of Education — Leadership Dashboard</div>
+    <div class="config-sub">Enter your token once — it will be saved in this browser and never asked again.</div>
 
     <div class="config-field">
       <label>Asana API Token</label>
       <input type="password" id="api-token" placeholder="2/1208060236533130/1213887640188652:fcf6f5d59fe94892e766ba2efaeb9939">
-      <small>Generate at: Asana → My Profile → Apps → Manage Developer Apps → New Access Token</small>
+      <small>Generate at: app.asana.com/0/my-apps → + Create new token → name it "FINE Dashboard"</small>
     </div>
 
     <div class="config-field">
       <label>Project GID</label>
-      <input type="text" id="project-gid" placeholder="1234567890123456">
-      <small>Found in your Asana project URL: app.asana.com/0/<strong>YOUR_GID</strong>/list</small>
+      <input type="text" id="project-gid" placeholder="1213888401054501" value="1213888401054501">
+      <small>Pre-filled with your F.I.N.E. project GID — do not change.</small>
     </div>
 
     <button class="config-btn" onclick="connectAsana()">Connect to Asana →</button>
-    <button class="demo-btn" onclick="loadDemo()">Load Demo Data (no Asana needed)</button>
 
     <div id="config-error" style="margin-top:1rem;font-size:0.8rem;color:var(--red);display:none;"></div>
   </div>
@@ -899,7 +898,7 @@
 
 <script>
 // ── STATE ──────────────────────────────────────────────────────────────────
-let API_TOKEN = 'PASTE_YOUR_TOKEN_HERE';
+let API_TOKEN = localStorage.getItem('fine_asana_token') || '';
 let PROJECT_GID = '1213888401054501';
 let USE_DEMO = false;
 let tasks = [];
@@ -1008,6 +1007,8 @@ async function connectAsana() {
   API_TOKEN = token;
   PROJECT_GID = gid;
   USE_DEMO = false;
+  localStorage.setItem('fine_asana_token', token);
+  localStorage.setItem('fine_project_gid', gid);
   $('config-error').style.display = 'none';
   $('config-screen').style.display = 'none';
   $('dashboard').style.display = 'block';
@@ -1015,9 +1016,13 @@ async function connectAsana() {
   refreshInterval = setInterval(refreshData, 5 * 60 * 1000);
 }
 
-// Auto-connect if token is pre-filled
+// Auto-connect if token is stored
 window.addEventListener('DOMContentLoaded', () => {
-  if (API_TOKEN && API_TOKEN !== 'PASTE_YOUR_TOKEN_HERE' && PROJECT_GID) {
+  const savedToken = localStorage.getItem('fine_asana_token');
+  const savedGid = localStorage.getItem('fine_project_gid') || PROJECT_GID;
+  if (savedToken) {
+    API_TOKEN = savedToken;
+    PROJECT_GID = savedGid;
     $('config-screen').style.display = 'none';
     $('dashboard').style.display = 'block';
     refreshData();
