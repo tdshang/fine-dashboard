@@ -155,7 +155,11 @@ function rSt(){
 var wsEntries=[];
 function rWS(){
   var map={};T.forEach(function(t){var ws=wsOf(t),ph=phOf(t),k=ph+'|'+ws;if(!map[k])map[k]={ws:ws,ph:ph,t:[]};map[k].t.push(t);});
-  wsEntries=Object.values(map).sort(function(a,b){var o={'Phase 1':0,'Phase 2':1,'Phase 3':2};var oa=o[a.ph]!==undefined?o[a.ph]:3,ob=o[b.ph]!==undefined?o[b.ph]:3;return oa-ob;});
+  wsEntries=Object.values(map).sort(function(a,b){
+    var rank={'Phase 1':1,'Phase 2':2,'Phase 3':3};
+    var ra=rank[a.ph]||4, rb=rank[b.ph]||4;
+    return ra-rb;
+  });
   $('wsc').textContent=wsEntries.length+' workstreams';
   if(!wsEntries.length){$('ws').innerHTML='<div class="emp">No data yet</div>';return;}
   var td=tod();
