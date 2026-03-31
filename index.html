@@ -152,19 +152,77 @@ function rSt(){
   var sn=M.filter(function(m){var d=dys(m.due_on);return !m.completed&&d!==null&&d<=14&&d>=0}).length;
   $('st').innerHTML=[{n:tot,l:'Total Tasks',c:''},{n:dn,l:'Complete',c:'G'},{n:inp,l:'In Progress',c:''},{n:ov,l:'Blocked',c:ov>0?'D':''},{n:ov,l:'Overdue',c:ov>0?'D':''},{n:sn,l:'Gates Soon',c:sn>0?'W':''},{n:M.filter(function(m){return !m.completed}).length,l:'Milestones',c:''}].map(function(s){return'<div class="st '+s.c+'"><div class="sn">'+s.n+'</div><div class="sl">'+s.l+'</div></div>'}).join('');
 }
+var wsEntries=[];
 function rWS(){
   var map={};T.forEach(function(t){var ws=wsOf(t),ph=phOf(t),k=ph+'|'+ws;if(!map[k])map[k]={ws:ws,ph:ph,t:[]};map[k].t.push(t);});
-  var en=Object.values(map).sort(function(a,b){var o={'Phase 1':0,'Phase 2':1,'Phase 3':2};return(o[a.ph]||3)-(o[b.ph]||3)});
-  $('wsc').textContent=en.length+' workstreams';
-  if(!en.length){$('ws').innerHTML='<div class="emp">No data yet</div>';return;}
+  wsEntries=Object.values(map).sort(function(a,b){var o={'Phase 1':0,'Phase 2':1,'Phase 3':2};return(o[a.ph]||3)-(o[b.ph]||3)});
+  $('wsc').textContent=wsEntries.length+' workstreams';
+  if(!wsEntries.length){$('ws').innerHTML='<div class="emp">No data yet</div>';return;}
   var td=tod();
-  $('ws').innerHTML='<table class="wt"><thead><tr><th>Workstream</th><th>Owner</th><th>Status</th><th>Progress</th></tr></thead><tbody>'+en.map(function(e,i){
+  var rows=wsEntries.map(function(e,i){
     var tot=e.t.length,dn=e.t.filter(function(t){return t.completed}).length,pct=tot?Math.round(dn/tot*100):0;
     var ov=e.t.some(function(t){return !t.completed&&t.due_on&&new Date(t.due_on+'T00:00:00')<td});
     var rc='n',rl='Not Started';if(dn===tot&&tot>0){rc='g';rl='Complete';}else if(ov){rc='r';rl='At Risk';}else if(dn>0){rc='g';rl='On Track';}
     var col=phC(e.ph),sh=i%2?'background:#F9F9F7;':'';
-    return'<tr style="'+sh+'"><td><div class="wn">'+e.ws+'</div><div class="wp" style="color:'+col+'">'+e.ph+'</div></td><td><span class="ow">'+ownOf(e.t[0])+'</span></td><td><span class="rg '+rc+'"><span class="rd"></span>'+rl+'</span></td><td><div style="display:flex;align-items:center;gap:.4rem"><div class="mt"><div class="mf" style="width:'+pct+'%;background:'+col+'"></div></div><span style="font-size:.67rem;font-family:monospace;color:var(--gray)">'+pct+'%</span></div><div style="font-size:.62rem;color:var(--gray);margin-top:.1rem">'+dn+'/'+tot+'</div></td></tr>';
-  }).join('')+'</tbody></table>';
+    var taskGids=e.t.map(function(t){return t.gid}).join(',');
+    return '<tr class="ws-row" style="'+sh+'cursor:pointer;" onclick="toggleDrill('+i+',this)" data-idx="'+i+'">'
+      +'<td><div style="display:flex;align-items:center;gap:.5rem"><span class="drill-arrow" id="arr-'+i+'" style="font-size:.7rem;color:var(--gray);transition:transform .2s">&#9654;</span><div><div class="wn">'+e.ws+'</div><div class="wp" style="color:'+col+'">'+e.ph+'</div></div></div></td>'
+      +'<td><span class="ow">'+ownOf(e.t[0])+'</span></td>'
+      +'<td><span class="rg '+rc+'"><span class="rd"></span>'+rl+'</span></td>'
+      +'<td><div style="display:flex;align-items:center;gap:.4rem"><div class="mt"><div class="mf" style="width:'+pct+'%;background:'+col+'"></div></div><span style="font-size:.67rem;font-family:monospace;color:var(--gray)">'+pct+'%</span></div><div style="font-size:.62rem;color:var(--gray);margin-top:.1rem">'+dn+'/'+tot+'</div></td>'
+      +'</tr>'
+      +'<tr id="drill-'+i+'" style="display:none;"><td colspan="4" style="padding:0;background:var(--gray-lt);border-bottom:2px solid var(--border)"><div id="drill-inner-'+i+'" style="padding:.75rem 1.5rem .75rem 2.5rem"><div class="ld"><div class="sp"></div>Loading subtasks&hellip;</div></div></td></tr>';
+  }).join('');
+  $('ws').innerHTML='<table class="wt"><thead><tr><th>Workstream <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7">&mdash; click to expand subtasks</span></th><th>Owner</th><th>Status</th><th>Progress</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+var drillOpen={};
+async function toggleDrill(idx,row){
+  var dr=$('drill-'+idx);
+  if(drillOpen[idx]){
+    dr.style.display='none';
+    drillOpen[idx]=false;
+    $('arr-'+idx).style.transform='rotate(0deg)';
+    return;
+  }
+  dr.style.display='table-row';
+  drillOpen[idx]=true;
+  $('arr-'+idx).style.transform='rotate(90deg)';
+  var inner=$('drill-inner-'+idx);
+  var entry=wsEntries[idx];
+  var td=tod();
+  try{
+    var html='';
+    for(var ti=0;ti<entry.t.length;ti++){
+      var task=entry.t[ti];
+      var r=await fetch('https://app.asana.com/api/1.0/tasks/'+task.gid+'/subtasks?opt_fields=name,completed,due_on,assignee',{headers:{'Authorization':'Bearer '+TOKEN,'Accept':'application/json'}});
+      var subs=(await r.json()).data||[];
+      var tOv=!task.completed&&task.due_on&&new Date(task.due_on+'T00:00:00')<td;
+      html+='<div style="margin-bottom:.75rem">';
+      html+='<div style="display:flex;align-items:center;gap:.6rem;padding:.4rem 0;border-bottom:1px solid var(--border);margin-bottom:.4rem">';
+      html+='<span style="font-size:.75rem;font-weight:700;color:var(--ink)">'+task.name+'</span>';
+      html+='<span style="font-size:.65rem;color:var(--gray)">&mdash; '+ownOf(task)+'</span>';
+      if(task.completed)html+='<span style="font-size:.62rem;background:var(--green-lt);color:var(--green);padding:.1rem .4rem;border-radius:99px;font-weight:700">Complete</span>';
+      else if(tOv)html+='<span style="font-size:.62rem;background:var(--red-lt);color:var(--red);padding:.1rem .4rem;border-radius:99px;font-weight:700">Overdue</span>';
+      html+='</div>';
+      if(subs.length){
+        subs.forEach(function(s){
+          var sOv=!s.completed&&s.due_on&&new Date(s.due_on+'T00:00:00')<td;
+          var icon=s.completed?'<span style="color:var(--green);font-size:.75rem">&#10003;</span>':'<span style="width:10px;height:10px;border:1.5px solid var(--gray-mid);border-radius:2px;display:inline-block;vertical-align:middle"></span>';
+          html+='<div style="display:flex;align-items:center;gap:.6rem;padding:.3rem 0;border-bottom:1px solid rgba(68,68,65,.06)">';
+          html+=icon;
+          html+='<span style="font-size:.75rem;color:'+(s.completed?'var(--gray)':sOv?'var(--red)':'var(--ink)')+';'+(s.completed?'text-decoration:line-through;':'')+'flex:1">'+s.name+'</span>';
+          if(s.assignee)html+='<span style="font-size:.65rem;color:var(--gray);white-space:nowrap">'+s.assignee.name+'</span>';
+          if(s.due_on)html+='<span style="font-size:.65rem;font-family:monospace;color:'+(sOv?'var(--red)':'var(--gray)')+';white-space:nowrap;margin-left:.25rem">'+fmt(s.due_on)+'</span>';
+          html+='</div>';
+        });
+      } else {
+        html+='<div style="font-size:.72rem;color:var(--gray);padding:.3rem 0;font-style:italic">No subtasks yet &mdash; will be added after Phase 1 Gap Analysis</div>';
+      }
+      html+='</div>';
+    }
+    inner.innerHTML=html||'<div class="emp">No tasks found</div>';
+  }catch(e){inner.innerHTML='<div class="emp" style="color:var(--red)">Could not load subtasks</div>';}
 }
 function rMs(){
   var up=[].concat(M).filter(function(m){return dys(m.due_on)!==null}).sort(function(a,b){return new Date(a.due_on)-new Date(b.due_on)}).slice(0,8);
