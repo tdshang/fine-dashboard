@@ -775,7 +775,7 @@
 
     <div class="config-field">
       <label>Asana API Token</label>
-      <input type="password" id="api-token" placeholder="1/1234567890:abcdef...">
+      <input type="password" id="api-token" placeholder="2/1208060236533130/1213887640188652:fcf6f5d59fe94892e766ba2efaeb9939">
       <small>Generate at: Asana → My Profile → Apps → Manage Developer Apps → New Access Token</small>
     </div>
 
@@ -899,8 +899,8 @@
 
 <script>
 // ── STATE ──────────────────────────────────────────────────────────────────
-let API_TOKEN = '';
-let PROJECT_GID = '';
+let API_TOKEN = 'PASTE_YOUR_TOKEN_HERE';
+let PROJECT_GID = '1213888401054501';
 let USE_DEMO = false;
 let tasks = [];
 let milestones = [];
@@ -1014,6 +1014,16 @@ async function connectAsana() {
   await refreshData();
   refreshInterval = setInterval(refreshData, 5 * 60 * 1000);
 }
+
+// Auto-connect if token is pre-filled
+window.addEventListener('DOMContentLoaded', () => {
+  if (API_TOKEN && API_TOKEN !== 'PASTE_YOUR_TOKEN_HERE' && PROJECT_GID) {
+    $('config-screen').style.display = 'none';
+    $('dashboard').style.display = 'block';
+    refreshData();
+    refreshInterval = setInterval(refreshData, 5 * 60 * 1000);
+  }
+});
 
 function loadDemo() {
   USE_DEMO = true;
