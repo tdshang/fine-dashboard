@@ -1,935 +1,264 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROJECT F.I.N.E. — Leadership Dashboard</title>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Project F.I.N.E.</title>
+<script>
+var TOKEN = '2/1208060236533130/1213887640188652:fcf6f5d59fe94892e766ba2efaeb9939';
+var GID   = '1213888401054501';
+</script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
-
-  :root {
-    --navy: #0B1F3A;
-    --navy-mid: #132A4E;
-    --navy-light: #1B3A6B;
-    --gold: #C9A84C;
-    --gold-light: #E8C96A;
-    --cream: #F5F0E8;
-    --green: #2D7A4F;
-    --amber: #C47C1A;
-    --red: #B33A2E;
-    --blue: #1E6BAD;
-    --border: rgba(11,31,58,0.12);
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--navy);
-    color: var(--cream);
-    min-height: 100vh;
-  }
-
-  /* LOADING */
-  #loading {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 20px;
-    background: var(--navy);
-    background-image: 
-      radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.06) 0%, transparent 60%),
-      radial-gradient(ellipse at 80% 20%, rgba(30,107,173,0.08) 0%, transparent 50%);
-  }
-
-  .loading-wordmark {
-    font-family: 'DM Serif Display', serif;
-    font-size: 11px;
-    letter-spacing: 0.35em;
-    text-transform: uppercase;
-    color: var(--gold);
-    opacity: 0.7;
-  }
-
-  .loading-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: 28px;
-    color: var(--cream);
-  }
-
-  .spinner {
-    width: 28px; height: 28px;
-    border: 2px solid rgba(201,168,76,0.15);
-    border-top-color: var(--gold);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-
-  .loading-status {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: rgba(245,240,232,0.35);
-    letter-spacing: 0.05em;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ERROR */
-  #error-screen {
-    min-height: 100vh;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .error-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: 24px;
-    color: #E88A80;
-  }
-
-  .error-msg {
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    color: rgba(245,240,232,0.5);
-    max-width: 400px;
-    text-align: center;
-    line-height: 1.6;
-  }
-
-  .retry-btn {
-    background: rgba(201,168,76,0.1);
-    border: 1px solid rgba(201,168,76,0.3);
-    border-radius: 8px;
-    padding: 10px 24px;
-    color: var(--gold);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    cursor: pointer;
-    margin-top: 8px;
-  }
-
-  /* DASHBOARD */
-  #dashboard { display: none; }
-
-  /* HEADER */
-  .header {
-    background: var(--navy-mid);
-    border-bottom: 1px solid rgba(201,168,76,0.12);
-    padding: 0 40px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 60px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  .header-left { display: flex; align-items: center; gap: 16px; }
-
-  .header-wordmark {
-    font-family: 'DM Serif Display', serif;
-    font-size: 10px;
-    letter-spacing: 0.35em;
-    text-transform: uppercase;
-    color: var(--gold);
-  }
-
-  .header-divider {
-    width: 1px; height: 18px;
-    background: rgba(201,168,76,0.2);
-  }
-
-  .header-title {
-    font-size: 13px;
-    font-weight: 500;
-    color: rgba(245,240,232,0.7);
-  }
-
-  .header-right { display: flex; align-items: center; gap: 12px; }
-
-  .last-updated {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: rgba(245,240,232,0.3);
-  }
-
-  .refresh-btn {
-    background: rgba(201,168,76,0.08);
-    border: 1px solid rgba(201,168,76,0.18);
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 11px;
-    color: var(--gold);
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 500;
-    transition: all 0.15s;
-  }
-  .refresh-btn:hover { background: rgba(201,168,76,0.15); }
-
-  /* MAIN */
-  .main { padding: 28px 40px; max-width: 1360px; margin: 0 auto; }
-
-  /* DEADLINE BANNER */
-  .deadline-banner {
-    background: linear-gradient(135deg, rgba(201,168,76,0.1), rgba(201,168,76,0.04));
-    border: 1px solid rgba(201,168,76,0.2);
-    border-radius: 12px;
-    padding: 18px 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 28px;
-  }
-
-  .deadline-left { display: flex; align-items: center; gap: 14px; }
-  .deadline-emoji { font-size: 22px; }
-
-  .deadline-label {
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 2px;
-    font-weight: 500;
-  }
-
-  .deadline-text {
-    font-family: 'DM Serif Display', serif;
-    font-size: 17px;
-    color: var(--cream);
-  }
-
-  .deadline-sub {
-    font-size: 11px;
-    color: rgba(245,240,232,0.4);
-    margin-top: 2px;
-    font-family: 'DM Mono', monospace;
-  }
-
-  .deadline-counter { text-align: right; }
-
-  .days-number {
-    font-family: 'DM Serif Display', serif;
-    font-size: 52px;
-    color: var(--gold);
-    line-height: 1;
-  }
-
-  .days-label {
-    font-size: 10px;
-    color: rgba(245,240,232,0.4);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  /* STAT CARDS */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 14px;
-    margin-bottom: 28px;
-  }
-
-  .stat-card {
-    background: var(--navy-mid);
-    border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 10px;
-    padding: 18px 20px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .stat-card::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--bar-color);
-  }
-
-  .stat-value {
-    font-family: 'DM Serif Display', serif;
-    font-size: 42px;
-    color: var(--cream);
-    line-height: 1;
-    margin-bottom: 5px;
-  }
-
-  .stat-label {
-    font-size: 11px;
-    color: rgba(245,240,232,0.45);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    font-weight: 500;
-  }
-
-  .stat-pct {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: rgba(245,240,232,0.3);
-    margin-top: 6px;
-  }
-
-  /* TWO COL */
-  .two-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 20px;
-  }
-
-  .panel {
-    background: var(--navy-mid);
-    border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 10px;
-    padding: 22px;
-  }
-
-  .panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 18px;
-  }
-
-  .panel-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: 17px;
-    color: var(--cream);
-  }
-
-  .panel-badge {
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--gold);
-    font-weight: 500;
-    background: rgba(201,168,76,0.1);
-    padding: 3px 10px;
-    border-radius: 20px;
-  }
-
-  /* PHASE ROWS */
-  .phase-row { margin-bottom: 18px; }
-  .phase-row:last-child { margin-bottom: 0; }
-
-  .phase-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 8px;
-  }
-
-  .phase-name { font-size: 12px; font-weight: 600; color: var(--cream); }
-  .phase-dates { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(245,240,232,0.35); }
-
-  .phase-bar-bg {
-    height: 5px;
-    background: rgba(255,255,255,0.05);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 7px;
-  }
-
-  .phase-bar-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .fill-active { background: var(--blue); }
-  .fill-complete { background: var(--green); }
-  .fill-upcoming { background: rgba(245,240,232,0.1); }
-
-  .phase-stats {
-    display: flex;
-    gap: 14px;
-  }
-
-  .phase-stat {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: rgba(245,240,232,0.4);
-  }
-
-  .phase-stat b { color: var(--cream); font-weight: 500; }
-
-  /* STATUS ROWS */
-  .status-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    background: rgba(255,255,255,0.02);
-    border-radius: 7px;
-    margin-bottom: 8px;
-    border: 1px solid rgba(255,255,255,0.03);
-  }
-
-  .status-row:last-child { margin-bottom: 0; }
-
-  .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-
-  .status-name { font-size: 12px; color: var(--cream); font-weight: 500; flex: 0 0 100px; }
-
-  .status-bar-bg {
-    flex: 1;
-    height: 3px;
-    background: rgba(255,255,255,0.05);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  .status-bar-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
-
-  .status-count {
-    font-family: 'DM Serif Display', serif;
-    font-size: 20px;
-    color: var(--cream);
-    flex: 0 0 36px;
-    text-align: right;
-  }
-
-  /* FULL PANELS */
-  .full-panel {
-    background: var(--navy-mid);
-    border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 10px;
-    padding: 22px;
-    margin-bottom: 20px;
-  }
-
-  /* BLOCKED */
-  .blocked-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    background: rgba(179,58,46,0.06);
-    border: 1px solid rgba(179,58,46,0.15);
-    border-radius: 8px;
-    margin-bottom: 8px;
-    transition: background 0.15s;
-  }
-
-  .blocked-item:last-child { margin-bottom: 0; }
-  .blocked-item:hover { background: rgba(179,58,46,0.1); }
-
-  .blocked-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
-  .blocked-name { flex: 1; font-size: 12px; color: var(--cream); font-weight: 500; }
-  .blocked-who { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(245,240,232,0.35); }
-
-  .blocked-due {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: rgba(179,58,46,0.9);
-    background: rgba(179,58,46,0.1);
-    padding: 2px 7px;
-    border-radius: 4px;
-  }
-
-  /* MILESTONES */
-  .milestone-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    background: rgba(255,255,255,0.02);
-    border: 1px solid rgba(255,255,255,0.04);
-    border-radius: 8px;
-    margin-bottom: 8px;
-    transition: background 0.15s;
-  }
-
-  .milestone-item:last-child { margin-bottom: 0; }
-  .milestone-item.done { background: rgba(45,122,79,0.06); border-color: rgba(45,122,79,0.15); }
-  .milestone-item.overdue { background: rgba(179,58,46,0.06); border-color: rgba(179,58,46,0.15); }
-
-  .ms-icon { font-size: 14px; flex-shrink: 0; }
-  .ms-name { flex: 1; font-size: 12px; color: var(--cream); font-weight: 500; }
-  .ms-name.done { color: rgba(245,240,232,0.4); text-decoration: line-through; }
-  .ms-date { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(245,240,232,0.35); }
-
-  .ms-badge {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 2px 8px;
-    border-radius: 4px;
-  }
-
-  .ms-done { background: rgba(45,122,79,0.2); color: #5AC88A; }
-  .ms-upcoming { background: rgba(201,168,76,0.12); color: var(--gold); }
-  .ms-overdue { background: rgba(179,58,46,0.2); color: #E88A80; }
-
-  /* TEAM */
-  .team-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
-    gap: 10px;
-  }
-
-  .team-card {
-    background: rgba(255,255,255,0.02);
-    border: 1px solid rgba(255,255,255,0.04);
-    border-radius: 9px;
-    padding: 14px 16px;
-    transition: all 0.15s;
-  }
-
-  .team-card:hover { background: rgba(255,255,255,0.04); transform: translateY(-1px); }
-
-  .team-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-
-  .team-avatar {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    background: var(--navy-light);
-    border: 1.5px solid rgba(201,168,76,0.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'DM Serif Display', serif;
-    font-size: 12px;
-    color: var(--gold);
-    flex-shrink: 0;
-  }
-
-  .team-info {}
-  .team-name { font-size: 12px; font-weight: 600; color: var(--cream); line-height: 1.2; }
-  .team-role { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(245,240,232,0.35); }
-
-  .team-chips { display: flex; gap: 5px; flex-wrap: wrap; }
-
-  .chip {
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-family: 'DM Mono', monospace;
-    font-weight: 500;
-  }
-
-  .chip-open { background: rgba(30,107,173,0.18); color: #7BBFE8; }
-  .chip-done { background: rgba(45,122,79,0.18); color: #5AC88A; }
-  .chip-blocked { background: rgba(179,58,46,0.18); color: #E88A80; }
-
-  .empty { text-align: center; padding: 28px; color: rgba(245,240,232,0.25); font-size: 12px; }
-
-  .hidden { display: none !important; }
-</style>
-</head>
-<body>
-
-<!-- ── CONFIG: hardcode token here ─────────────────────────── -->
-<script>
-var TOKEN = 'pk_156056280_4ILKY4AHP2HV9QIVUTYHAV2QDVB53A9G';
-var SPACE_ID = '901313746539';
-var WORKSPACE_ID = '90132046480';
-</script>
-<!-- ──────────────────────────────────────────────────────────── -->
-
-<!-- LOADING -->
-<div id="loading">
-  <div class="loading-wordmark">Optima ED</div>
-  <div class="loading-title">Project F.I.N.E.</div>
-  <div class="spinner"></div>
-  <div class="loading-status" id="loading-status">Connecting to ClickUp...</div>
-</div>
-
-<!-- ERROR -->
-<div id="error-screen">
-  <div class="error-title">Unable to load dashboard</div>
-  <div class="error-msg" id="error-detail">Could not connect to ClickUp. Check that the API token is correct.</div>
-  <button class="retry-btn" onclick="location.reload()">Try again</button>
-</div>
-
-<!-- DASHBOARD -->
-<div id="dashboard">
-
-  <div class="header">
-    <div class="header-left">
-      <div class="header-wordmark">Optima ED</div>
-      <div class="header-divider"></div>
-      <div class="header-title">Project F.I.N.E. — Leadership Dashboard</div>
-    </div>
-    <div class="header-right">
-      <div class="last-updated" id="last-updated"></div>
-      <button class="refresh-btn" onclick="init()">↻ Refresh</button>
-    </div>
-  </div>
-
-  <div class="main">
-
-    <!-- DEADLINE BANNER -->
-    <div class="deadline-banner">
-      <div class="deadline-left">
-        <div class="deadline-emoji">🎓</div>
-        <div>
-          <div class="deadline-label">Hard Deadline</div>
-          <div class="deadline-text">Company Retreat — Teacher Training</div>
-          <div class="deadline-sub">July 28–31, 2026 · Platform live by July 25</div>
-        </div>
-      </div>
-      <div class="deadline-counter">
-        <div class="days-number" id="days-count">—</div>
-        <div class="days-label">days to retreat</div>
-      </div>
-    </div>
-
-    <!-- STAT CARDS -->
-    <div class="stats-grid">
-      <div class="stat-card" style="--bar-color: #2D7A4F">
-        <div class="stat-value" id="s-complete">—</div>
-        <div class="stat-label">Complete</div>
-        <div class="stat-pct" id="s-complete-pct"></div>
-      </div>
-      <div class="stat-card" style="--bar-color: #1E6BAD">
-        <div class="stat-value" id="s-inprogress">—</div>
-        <div class="stat-label">In Progress</div>
-        <div class="stat-pct" id="s-inprogress-pct"></div>
-      </div>
-      <div class="stat-card" style="--bar-color: #C9A84C">
-        <div class="stat-value" id="s-notstarted">—</div>
-        <div class="stat-label">Not Started</div>
-        <div class="stat-pct" id="s-notstarted-pct"></div>
-      </div>
-      <div class="stat-card" style="--bar-color: #C47C1A">
-        <div class="stat-value" id="s-atrisk">—</div>
-        <div class="stat-label">At Risk</div>
-        <div class="stat-pct" id="s-atrisk-pct"></div>
-      </div>
-      <div class="stat-card" style="--bar-color: #B33A2E">
-        <div class="stat-value" id="s-blocked">—</div>
-        <div class="stat-label">Blocked</div>
-        <div class="stat-pct" id="s-blocked-pct"></div>
-      </div>
-    </div>
-
-    <!-- PHASE + STATUS -->
-    <div class="two-col">
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Phase Progress</div>
-          <div class="panel-badge" id="phase-badge">4 Phases</div>
-        </div>
-        <div id="phase-rows"></div>
-      </div>
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Status Breakdown</div>
-          <div class="panel-badge" id="total-badge">— tasks</div>
-        </div>
-        <div id="status-rows"></div>
-      </div>
-    </div>
-
-    <!-- BLOCKED -->
-    <div class="full-panel">
-      <div class="panel-header">
-        <div class="panel-title">Blocked Tasks</div>
-        <div class="panel-badge" id="blocked-badge">—</div>
-      </div>
-      <div id="blocked-list"></div>
-    </div>
-
-    <!-- MILESTONES -->
-    <div class="full-panel">
-      <div class="panel-header">
-        <div class="panel-title">Milestones & Gates</div>
-        <div class="panel-badge" id="milestone-badge">—</div>
-      </div>
-      <div id="milestone-list"></div>
-    </div>
-
-    <!-- TEAM -->
-    <div class="full-panel">
-      <div class="panel-header">
-        <div class="panel-title">Team Workload</div>
-        <div class="panel-badge">13 Members</div>
-      </div>
-      <div class="team-grid" id="team-grid"></div>
-    </div>
-
+:root{--blue:#1A4F8A;--blue-lt:#E6F1FB;--teal:#0F6E56;--green:#3B6D11;--green-lt:#EAF3DE;--red:#A32D2D;--red-lt:#FCEBEB;--amber:#BA7517;--amber-lt:#FAEEDA;--gray:#444441;--gray-lt:#F5F5F2;--gray-mid:#D3D1C7;--ink:#1C1C1A;--paper:#FAFAF7;--card:#fff;--border:rgba(68,68,65,.12);--shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04)}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.6}
+.bar{background:var(--blue);padding:0 1.5rem;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.bt{font-size:1.05rem;font-weight:800;color:#fff}.br{display:flex;align-items:center;gap:.75rem}
+.upd{font-size:.68rem;color:rgba(255,255,255,.5);font-family:monospace}
+.rb{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;padding:.28rem .65rem;font-size:.72rem;cursor:pointer}
+.vtog{display:flex;background:rgba(255,255,255,.1);border-radius:6px;padding:2px}
+.vb{padding:.28rem .65rem;border:none;background:transparent;color:rgba(255,255,255,.6);font-size:.72rem;cursor:pointer;border-radius:4px;font-weight:600}
+.vb.on{background:#fff;color:var(--blue)}
+.main{padding:1.25rem 1.5rem;max-width:1400px;margin:0 auto}
+.err{background:var(--red-lt);border:1px solid #f09595;border-radius:8px;padding:.65rem .875rem;font-size:.78rem;color:var(--red);margin-bottom:.875rem;display:none}
+.pr{display:grid;grid-template-columns:repeat(3,1fr);gap:.875rem;margin-bottom:1.25rem}
+.pc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.25rem;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.pc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c,var(--blue))}
+.plb{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:.2rem}
+.pnm{font-size:.9rem;font-weight:700;color:var(--ink);margin-bottom:.5rem}
+.pdt{font-size:.67rem;color:var(--gray);margin-bottom:.7rem}
+.bt2{background:var(--gray-lt);border-radius:99px;height:5px;margin-bottom:.35rem;overflow:hidden}
+.bf{height:100%;border-radius:99px;background:var(--c,var(--blue));transition:width .5s}
+.bl{display:flex;justify-content:space-between;font-size:.67rem;color:var(--gray)}
+.bp{font-family:monospace;font-weight:700;color:var(--ink)}
+.pbg{display:inline-block;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:.17rem .5rem;border-radius:99px;margin-top:.55rem}
+.sts{display:grid;grid-template-columns:repeat(7,1fr);gap:.6rem;margin-bottom:1.25rem}
+.st{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:.875rem;text-align:center;box-shadow:var(--shadow)}
+.sn{font-size:1.6rem;font-weight:800;color:var(--ink);line-height:1;margin-bottom:.2rem}
+.sl{font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray)}
+.st.D .sn{color:var(--red)}.st.W .sn{color:var(--amber)}.st.G .sn{color:var(--green)}
+.grid{display:grid;grid-template-columns:1fr 340px;gap:.875rem;align-items:start}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:.875rem}
+.ph{padding:.875rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.pht{font-size:.9rem;font-weight:700;color:var(--ink)}
+.phc{font-size:.67rem;color:var(--gray);background:var(--gray-lt);padding:.17rem .5rem;border-radius:99px;font-family:monospace}
+table.wt{width:100%;border-collapse:collapse}
+.wt th{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);padding:.55rem 1.1rem;text-align:left;background:var(--gray-lt);border-bottom:1px solid var(--border)}
+.wt td{padding:.7rem 1.1rem;border-bottom:1px solid var(--border);vertical-align:middle}
+.wt tr:last-child td{border-bottom:none}.wt tr:hover td{background:var(--gray-lt)}
+.wn{font-weight:600;font-size:.78rem;color:var(--ink)}.wp{font-size:.65rem}
+.ow{display:inline-block;font-size:.65rem;background:var(--blue-lt);color:var(--blue);padding:.12rem .42rem;border-radius:99px;font-weight:600}
+.rg{display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:700;padding:.18rem .52rem;border-radius:99px}
+.rd{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.rg.g{background:var(--green-lt);color:var(--green)}.rg.g .rd{background:var(--green)}
+.rg.a{background:var(--amber-lt);color:var(--amber)}.rg.a .rd{background:var(--amber)}
+.rg.r{background:var(--red-lt);color:var(--red)}.rg.r .rd{background:var(--red)}
+.rg.n{background:var(--gray-lt);color:var(--gray)}.rg.n .rd{background:var(--gray-mid)}
+.mt{background:var(--gray-lt);border-radius:99px;height:3px;width:64px;overflow:hidden;display:inline-block;vertical-align:middle}
+.mf{height:100%;border-radius:99px}
+.mi{padding:.65rem 1.1rem;border-bottom:1px solid var(--border);display:flex;gap:.65rem;align-items:flex-start}
+.mi:last-child{border-bottom:none}
+.md{width:16px;height:16px;border:2px solid var(--blue);background:var(--blue-lt);border-radius:2px;transform:rotate(45deg);flex-shrink:0;margin-top:2px}
+.md.dn{border-color:var(--green);background:var(--green-lt)}.md.ht{border-color:var(--red);background:var(--red-lt)}
+.mn{font-size:.75rem;font-weight:600;color:var(--ink);margin-bottom:.1rem}
+.mdt{font-size:.65rem;color:var(--gray);font-family:monospace}.mdt.ht{color:var(--red);font-weight:600}
+.bi{padding:.65rem 1.1rem;border-bottom:1px solid var(--border);border-left:3px solid var(--red)}
+.bi:last-child{border-bottom:none}
+.bk{font-size:.75rem;font-weight:600;color:var(--red);margin-bottom:.1rem}.bd{font-size:.67rem;color:var(--gray)}
+.di{padding:.55rem 1.1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.di:last-child{border-bottom:none}
+.dn2{font-size:.75rem;color:var(--ink);font-weight:500}.dw{font-size:.65rem;color:var(--gray)}
+.dd{font-size:.65rem;font-family:monospace;color:var(--gray);white-space:nowrap;margin-left:.5rem;flex-shrink:0}
+.dd.ov{color:var(--red);font-weight:700}.dd.td{color:var(--amber);font-weight:700}
+.vb2{padding:.875rem 1.1rem;display:flex;align-items:flex-end;gap:3px;height:72px}
+.vbr{flex:1;background:var(--blue-lt);border-radius:2px 2px 0 0;min-height:3px}.vbr:hover{background:var(--blue)}
+.vbl{display:flex;justify-content:space-around;padding:.2rem 1.1rem .65rem;font-size:.6rem;color:var(--gray);font-family:monospace}
+.emp{padding:1.5rem 1.1rem;text-align:center;color:var(--gray);font-size:.78rem}
+.ld{display:flex;align-items:center;justify-content:center;padding:2rem;color:var(--gray);font-size:.8rem;gap:.6rem}
+.sp{width:16px;height:16px;border:2px solid var(--gray-mid);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#lv{display:none}
+.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.25rem}
+.sc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.sc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:4px;background:var(--sc,var(--blue))}
+.s2{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:.35rem}
+.sp3{font-size:2.75rem;font-weight:800;color:var(--ink);line-height:1;margin-bottom:.3rem}
+.slb{font-size:.78rem;color:var(--gray)}
+.gg{display:grid;grid-template-columns:repeat(4,1fr);gap:.65rem;margin-bottom:1.25rem}
+.gc{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:.875rem;text-align:center;box-shadow:var(--shadow)}
+.gi{font-size:1.3rem;margin-bottom:.25rem}.gn{font-size:.68rem;font-weight:600;color:var(--ink);margin-bottom:.1rem}
+.gs{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray)}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}.sts{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:700px){.pr,.sg{grid-template-columns:1fr}.sts{grid-template-columns:repeat(3,1fr)}.gg{grid-template-columns:repeat(2,1fr)}}
+</style></head><body>
+<div class="bar">
+  <span class="bt">Project F.I.N.E. &mdash; Platform Migration</span>
+  <div class="br">
+    <div class="vtog"><button class="vb on" onclick="sv('c',this)">CTO View</button><button class="vb" onclick="sv('l',this)">Leadership</button></div>
+    <span class="upd" id="upd">Loading&hellip;</span>
+    <button class="rb" onclick="load()">&circlearrowright; Refresh</button>
   </div>
 </div>
-
+<div class="main">
+  <div class="err" id="err"></div>
+  <div id="cv">
+    <div class="pr" id="ph"></div>
+    <div class="sts" id="st"></div>
+    <div class="grid">
+      <div>
+        <div class="panel"><div class="ph"><span class="pht">Workstream Status</span><span class="phc" id="wsc">&mdash;</span></div><div id="ws"><div class="ld"><div class="sp"></div>Loading&hellip;</div></div></div>
+        <div class="panel"><div class="ph"><span class="pht">Due This Week</span><span class="phc" id="duc">&mdash;</span></div><div id="due"><div class="ld"><div class="sp"></div>Loading&hellip;</div></div></div>
+      </div>
+      <div>
+        <div class="panel"><div class="ph"><span class="pht">Daily Completion</span></div><div class="vb2" id="vel"></div><div class="vbl" id="vll"></div></div>
+        <div class="panel"><div class="ph"><span class="pht">Upcoming Milestones</span><span class="phc" id="msc">&mdash;</span></div><div id="msl"><div class="ld"><div class="sp"></div>Loading&hellip;</div></div></div>
+        <div class="panel"><div class="ph"><span class="pht">Blockers</span><span class="phc" id="blc" style="background:var(--red-lt);color:var(--red)">&mdash;</span></div><div id="blk"><div class="ld"><div class="sp"></div>Loading&hellip;</div></div></div>
+      </div>
+    </div>
+  </div>
+  <div id="lv">
+    <div class="sg" id="sm"></div>
+    <div class="gg" id="gn"></div>
+    <div class="panel"><div class="ph"><span class="pht">Phase Gate &amp; Risk Summary</span></div><div id="gd"></div></div>
+  </div>
+</div>
 <script>
-// ── CONSTANTS ────────────────────────────────────────────────────────────
-const RETREAT = new Date('2026-07-28');
-
-const PHASES = [
-  { name: 'Phase 0 — Pre-Sprint 0',      dates: 'Now → Apr 17',    folder: '901318021853' },
-  { name: 'Phase 1 — Sprint 0 Audit',    dates: 'Apr 17–28',       folder: '901318021854' },
-  { name: 'Phase 2 — Build Sprints 1–7', dates: 'Apr 28 – Jul 17', folder: '901318021855' },
-  { name: 'Phase 3 — QA & Deployment',   dates: 'Jul 13–25',       folder: '901318021857' },
-];
-
-const LIST_TO_FOLDER = {
-  '901326821482':'901318021853','901326821483':'901318021853','901326821484':'901318021853',
-  '901326821485':'901318021854','901326821486':'901318021854','901326821487':'901318021854',
-  '901326821488':'901318021854','901326821489':'901318021854','901326821490':'901318021854',
-  '901326821491':'901318021854','901326821492':'901318021854','901326821493':'901318021854',
-  '901326821496':'901318021854','901326821498':'901318021854',
-  '901326821499':'901318021855','901326821500':'901318021855','901326821501':'901318021855',
-  '901326821502':'901318021855','901326821503':'901318021855','901326821504':'901318021855',
-  '901326821505':'901318021855',
-  '901326821506':'901318021857','901326821507':'901318021857','901326821508':'901318021857',
-  '901326821509':'901318021857',
-};
-
-const TEAM = [
-  { email:'tshang@optimaed.com',    name:'Tina Shang',       role:'DET',     initials:'TS' },
-  { email:'vjordan@optimaed.com',   name:'Vince Jordan',     role:'CTO',     initials:'VJ' },
-  { email:'doverby@optimaed.com',   name:'Dylan Overby',     role:'TL/PD',   initials:'DO' },
-  { email:'jstiles@optimaed.com',   name:'Jay Stiles',       role:'FSD/AI',  initials:'JS' },
-  { email:'hmangrum@optimaed.com',  name:'Heather Mangrum',  role:'UD',      initials:'HM' },
-  { email:'rbezzina@optimaed.com',  name:'Rachel Bezzina',   role:'Video',   initials:'RB' },
-  { email:'scozart@optimaed.com',   name:'Sydney Carter',    role:'Asset',   initials:'SC' },
-  { email:'gwarren@optimaed.com',   name:'Gabe Warren',      role:'Asset',   initials:'GW' },
-  { email:'jolson@optimaed.com',    name:'Jonathan Olson',   role:'SME Lead',initials:'JO' },
-  { email:'rwalker@optimaed.com',   name:'Ryan Walker',      role:'SME',     initials:'RW' },
-  { email:'sdevereaux@optimaed.com',name:'Sarah Devereaux',  role:'SME',     initials:'SD' },
-  { email:'jbergel@optimaed.com',   name:'Jessica Bergel',   role:'SME',     initials:'JB' },
-  { email:'hduley@optimaed.com',    name:'Heather Duley',    role:'SME',     initials:'HD' },
-];
-
-// ── API ──────────────────────────────────────────────────────────────────
-function cuFetch(path) {
-  return fetch('https://api.clickup.com/api/v2' + path, {
-    headers: { Authorization: TOKEN }
-  }).then(r => {
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.json();
+var T=[],M=[],phC=function(p){return p==='Phase 1'?'#1A4F8A':p==='Phase 2'?'#0F6E56':'#BA7517'};
+var $=function(i){return document.getElementById(i)};
+var fmt=function(d){if(!d)return'&mdash;';return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})};
+var dys=function(d){if(!d)return null;return Math.round((new Date(d+'T00:00:00')-new Date(new Date().toDateString()))/864e5)};
+var tod=function(){var d=new Date();d.setHours(0,0,0,0);return d};
+var ownOf=function(t){if(t.assignee&&t.assignee.name)return t.assignee.name;var m=(t.notes||'').match(/Owner:\s*([^\.\n]+)/);return m?m[1].trim():'&mdash;'};
+var phOf=function(t){var m=(t.notes||'').match(/Phase:\s*(Phase \d)/);return m?m[1]:'Phase 1'};
+var wsOf=function(t){var m=(t.notes||'').match(/Workstream:\s*([^\.\n]+)/);return m?m[1].trim():t.name};
+async function load(){
+  try{
+    $('err').style.display='none';
+    var r=await fetch('https://app.asana.com/api/1.0/projects/'+GID+'/tasks?opt_fields=name,completed,due_on,assignee,resource_subtype,notes&limit=100',{headers:{'Authorization':'Bearer '+TOKEN,'Accept':'application/json'}});
+    if(!r.ok)throw new Error(r.status);
+    var d=(await r.json()).data||[];
+    M=d.filter(function(t){return t.resource_subtype==='milestone'});
+    T=d.filter(function(t){return t.resource_subtype!=='milestone'});
+    render();$('upd').textContent='Updated '+new Date().toLocaleTimeString();
+  }catch(e){$('err').textContent='Cannot connect to Asana. Check that your token is correct on line 4 of this file.';$('err').style.display='block';$('upd').textContent='Error';}
+}
+function render(){rPh();rSt();rWS();rMs();rBl();rDu();rVl();rLd();}
+function rPh(){
+  var ps=['Phase 1','Phase 2','Phase 3'],ns=['Discovery & Gap Analysis','Build & Migration','Test, Train & Deploy'],ds=['April 13 \u2013 April 26','April 27 \u2013 July 1','July 1 \u2013 July 27'];
+  $('ph').innerHTML=ps.map(function(p,i){
+    var pt=T.filter(function(t){return phOf(t)===p}),dn=pt.filter(function(t){return t.completed}).length,tot=pt.length,pct=tot?Math.round(dn/tot*100):0;
+    var col=phC(p),bg=pct===100?'var(--green-lt)':'var(--blue-lt)',tc=pct===100?'var(--green)':'var(--blue)',bl=pct===100?'Complete':tot===0?'Not Started':'In Progress';
+    return '<div class="pc" style="--c:'+col+'"><div class="plb">'+p+'</div><div class="pnm">'+ns[i]+'</div><div class="pdt">'+ds[i]+'</div><div class="bt2"><div class="bf" style="width:'+pct+'%"></div></div><div class="bl"><span>'+dn+'/'+tot+' tasks</span><span class="bp">'+pct+'%</span></div><span class="pbg" style="background:'+bg+';color:'+tc+'">'+bl+'</span></div>';
+  }).join('');
+}
+function rSt(){
+  var td=tod(),tot=T.length,dn=T.filter(function(t){return t.completed}).length,inp=T.filter(function(t){return !t.completed}).length;
+  var ov=T.filter(function(t){return !t.completed&&t.due_on&&new Date(t.due_on+'T00:00:00')<td}).length;
+  var sn=M.filter(function(m){var d=dys(m.due_on);return !m.completed&&d!==null&&d<=14&&d>=0}).length;
+  $('st').innerHTML=[{n:tot,l:'Total Tasks',c:''},{n:dn,l:'Complete',c:'G'},{n:inp,l:'In Progress',c:''},{n:ov,l:'Blocked',c:ov>0?'D':''},{n:ov,l:'Overdue',c:ov>0?'D':''},{n:sn,l:'Gates Soon',c:sn>0?'W':''},{n:M.filter(function(m){return !m.completed}).length,l:'Milestones',c:''}].map(function(s){return'<div class="st '+s.c+'"><div class="sn">'+s.n+'</div><div class="sl">'+s.l+'</div></div>'}).join('');
+}
+var wsEntries=[];
+function rWS(){
+  var map={};T.forEach(function(t){var ws=wsOf(t),ph=phOf(t),k=ph+'|'+ws;if(!map[k])map[k]={ws:ws,ph:ph,t:[]};map[k].t.push(t);});
+  wsEntries=Object.values(map).sort(function(a,b){
+    var rank={'Phase 1':1,'Phase 2':2,'Phase 3':3};
+    var ra=rank[a.ph]||4, rb=rank[b.ph]||4;
+    return ra-rb;
   });
+  $('wsc').textContent=wsEntries.length+' workstreams';
+  if(!wsEntries.length){$('ws').innerHTML='<div class="emp">No data yet</div>';return;}
+  var td=tod();
+  var rows=wsEntries.map(function(e,i){
+    var tot=e.t.length,dn=e.t.filter(function(t){return t.completed}).length,pct=tot?Math.round(dn/tot*100):0;
+    var ov=e.t.some(function(t){return !t.completed&&t.due_on&&new Date(t.due_on+'T00:00:00')<td});
+    var rc='n',rl='Not Started';if(dn===tot&&tot>0){rc='g';rl='Complete';}else if(ov){rc='r';rl='At Risk';}else if(dn>0){rc='g';rl='On Track';}
+    var col=phC(e.ph),sh=i%2?'background:#F9F9F7;':'';
+    var taskGids=e.t.map(function(t){return t.gid}).join(',');
+    return '<tr class="ws-row" style="'+sh+'cursor:pointer;" onclick="toggleDrill('+i+',this)" data-idx="'+i+'">'
+      +'<td><div style="display:flex;align-items:center;gap:.5rem"><span class="drill-arrow" id="arr-'+i+'" style="font-size:.7rem;color:var(--gray);transition:transform .2s">&#9654;</span><div><div class="wn">'+e.ws+'</div><div class="wp" style="color:'+col+'">'+e.ph+'</div></div></div></td>'
+      +'<td><span class="ow">'+ownOf(e.t[0])+'</span></td>'
+      +'<td><span class="rg '+rc+'"><span class="rd"></span>'+rl+'</span></td>'
+      +'<td><div style="display:flex;align-items:center;gap:.4rem"><div class="mt"><div class="mf" style="width:'+pct+'%;background:'+col+'"></div></div><span style="font-size:.67rem;font-family:monospace;color:var(--gray)">'+pct+'%</span></div><div style="font-size:.62rem;color:var(--gray);margin-top:.1rem">'+dn+'/'+tot+'</div></td>'
+      +'</tr>'
+      +'<tr id="drill-'+i+'" style="display:none;"><td colspan="4" style="padding:0;background:var(--gray-lt);border-bottom:2px solid var(--border)"><div id="drill-inner-'+i+'" style="padding:.75rem 1.5rem .75rem 2.5rem"><div class="ld"><div class="sp"></div>Loading subtasks&hellip;</div></div></td></tr>';
+  }).join('');
+  $('ws').innerHTML='<table class="wt"><thead><tr><th>Workstream <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7">&mdash; click to expand subtasks</span></th><th>Owner</th><th>Status</th><th>Progress</th></tr></thead><tbody>'+rows+'</tbody></table>';
 }
 
-function setStatus(msg) {
-  document.getElementById('loading-status').textContent = msg;
-}
-
-// ── FETCH ALL TASKS ───────────────────────────────────────────────────────
-async function fetchAllTasks() {
-  setStatus('Fetching project lists...');
-  const listsData = await cuFetch('/space/' + SPACE_ID + '/list?archived=false');
-  const lists = listsData.lists || [];
-  const tasks = [];
-
-  for (let i = 0; i < lists.length; i++) {
-    const list = lists[i];
-    setStatus('Loading ' + (i + 1) + '/' + lists.length + ': ' + list.name + '...');
-    let page = 0;
-    while (true) {
-      const data = await cuFetch('/list/' + list.id + '/task?page=' + page + '&include_closed=true&subtasks=false');
-      const batch = data.tasks || [];
-      batch.forEach(t => { t._listId = list.id; });
-      tasks.push(...batch);
-      if (batch.length < 100) break;
-      page++;
+var drillOpen={};
+async function toggleDrill(idx,row){
+  var dr=$('drill-'+idx);
+  if(drillOpen[idx]){
+    dr.style.display='none';
+    drillOpen[idx]=false;
+    $('arr-'+idx).style.transform='rotate(0deg)';
+    return;
+  }
+  dr.style.display='table-row';
+  drillOpen[idx]=true;
+  $('arr-'+idx).style.transform='rotate(90deg)';
+  var inner=$('drill-inner-'+idx);
+  var entry=wsEntries[idx];
+  var td=tod();
+  try{
+    var html='';
+    for(var ti=0;ti<entry.t.length;ti++){
+      var task=entry.t[ti];
+      var r=await fetch('https://app.asana.com/api/1.0/tasks/'+task.gid+'/subtasks?opt_fields=name,completed,due_on,assignee',{headers:{'Authorization':'Bearer '+TOKEN,'Accept':'application/json'}});
+      var subs=(await r.json()).data||[];
+      var tOv=!task.completed&&task.due_on&&new Date(task.due_on+'T00:00:00')<td;
+      html+='<div style="margin-bottom:.75rem">';
+      html+='<div style="display:flex;align-items:center;gap:.6rem;padding:.4rem 0;border-bottom:1px solid var(--border);margin-bottom:.4rem">';
+      html+='<span style="font-size:.75rem;font-weight:700;color:var(--ink)">'+task.name+'</span>';
+      html+='<span style="font-size:.65rem;color:var(--gray)">&mdash; '+ownOf(task)+'</span>';
+      if(task.completed)html+='<span style="font-size:.62rem;background:var(--green-lt);color:var(--green);padding:.1rem .4rem;border-radius:99px;font-weight:700">Complete</span>';
+      else if(tOv)html+='<span style="font-size:.62rem;background:var(--red-lt);color:var(--red);padding:.1rem .4rem;border-radius:99px;font-weight:700">Overdue</span>';
+      html+='</div>';
+      if(subs.length){
+        subs.forEach(function(s){
+          var sOv=!s.completed&&s.due_on&&new Date(s.due_on+'T00:00:00')<td;
+          var icon=s.completed?'<span style="color:var(--green);font-size:.75rem">&#10003;</span>':'<span style="width:10px;height:10px;border:1.5px solid var(--gray-mid);border-radius:2px;display:inline-block;vertical-align:middle"></span>';
+          html+='<div style="display:flex;align-items:center;gap:.6rem;padding:.3rem 0;border-bottom:1px solid rgba(68,68,65,.06)">';
+          html+=icon;
+          html+='<span style="font-size:.75rem;color:'+(s.completed?'var(--gray)':sOv?'var(--red)':'var(--ink)')+';'+(s.completed?'text-decoration:line-through;':'')+'flex:1">'+s.name+'</span>';
+          if(s.assignee)html+='<span style="font-size:.65rem;color:var(--gray);white-space:nowrap">'+s.assignee.name+'</span>';
+          if(s.due_on)html+='<span style="font-size:.65rem;font-family:monospace;color:'+(sOv?'var(--red)':'var(--gray)')+';white-space:nowrap;margin-left:.25rem">'+fmt(s.due_on)+'</span>';
+          html+='</div>';
+        });
+      } else {
+        html+='<div style="font-size:.72rem;color:var(--gray);padding:.3rem 0;font-style:italic">No subtasks yet &mdash; will be added after Phase 1 Gap Analysis</div>';
+      }
+      html+='</div>';
     }
-  }
-  return tasks;
+    inner.innerHTML=html||'<div class="emp">No tasks found</div>';
+  }catch(e){inner.innerHTML='<div class="emp" style="color:var(--red)">Could not load subtasks</div>';}
 }
-
-// ── MAIN ──────────────────────────────────────────────────────────────────
-let allTasks = [];
-
-async function init() {
-  document.getElementById('loading').style.display = 'flex';
-  document.getElementById('dashboard').style.display = 'none';
-  document.getElementById('error-screen').style.display = 'none';
-
-  try {
-    allTasks = await fetchAllTasks();
-    render();
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
-    document.getElementById('last-updated').textContent =
-      'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  } catch(e) {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('error-screen').style.display = 'flex';
-    document.getElementById('error-detail').textContent = e.message;
-  }
+function rMs(){
+  var up=[].concat(M).filter(function(m){return dys(m.due_on)!==null}).sort(function(a,b){return new Date(a.due_on)-new Date(b.due_on)}).slice(0,8);
+  $('msc').textContent=up.length;
+  if(!up.length){$('msl').innerHTML='<div class="emp">No milestones</div>';return;}
+  $('msl').innerHTML=up.map(function(m){var d=dys(m.due_on),dn=m.completed,ht=!dn&&d<=7,cl=dn?'dn':ht?'ht':'',dl=dn?'\u2713 Done':d===0?'Today':d<0?Math.abs(d)+'d overdue':d+'d away',dc=(!dn&&d<0)||ht?'ht':'';return'<div class="mi"><div class="md '+cl+'"></div><div><div class="mn">'+m.name+'</div><div class="mdt '+dc+'">'+fmt(m.due_on)+' &middot; '+dl+'</div></div></div>';}).join('');
 }
-
-// ── RENDER ────────────────────────────────────────────────────────────────
-function pct(n, total) { return total ? Math.round(n / total * 100) : 0; }
-
-function sStatus(t) { return (t.status?.status || '').toLowerCase().trim(); }
-
-function isDone(t) { const s = sStatus(t); return s === 'complete' || s === 'closed'; }
-
-function render() {
-  const now = Date.now();
-  const days = Math.ceil((RETREAT - now) / 86400000);
-  document.getElementById('days-count').textContent = days;
-
-  // Status counts
-  const counts = { complete:0, 'in progress':0, 'not started':0, 'at risk':0, blocked:0 };
-  allTasks.forEach(t => {
-    const s = sStatus(t);
-    if (s === 'complete' || s === 'closed') counts.complete++;
-    else if (s === 'in progress') counts['in progress']++;
-    else if (s === 'at risk') counts['at risk']++;
-    else if (s === 'blocked') counts.blocked++;
-    else counts['not started']++;
-  });
-  const total = allTasks.length;
-
-  const sid = (k, v) => { document.getElementById(k).textContent = v; };
-  sid('s-complete', counts.complete);
-  sid('s-complete-pct', pct(counts.complete, total) + '% of total');
-  sid('s-inprogress', counts['in progress']);
-  sid('s-inprogress-pct', pct(counts['in progress'], total) + '% of total');
-  sid('s-notstarted', counts['not started']);
-  sid('s-notstarted-pct', pct(counts['not started'], total) + '% of total');
-  sid('s-atrisk', counts['at risk']);
-  sid('s-atrisk-pct', pct(counts['at risk'], total) + '% of total');
-  sid('s-blocked', counts.blocked);
-  sid('s-blocked-pct', pct(counts.blocked, total) + '% of total');
-  document.getElementById('total-badge').textContent = total + ' tasks';
-
-  // Phases
-  const folderMap = {};
-  allTasks.forEach(t => {
-    const fid = LIST_TO_FOLDER[t._listId] || 'other';
-    if (!folderMap[fid]) folderMap[fid] = [];
-    folderMap[fid].push(t);
-  });
-
-  document.getElementById('phase-rows').innerHTML = PHASES.map(p => {
-    const pts = folderMap[p.folder] || [];
-    const done = pts.filter(isDone).length;
-    const inprog = pts.filter(t => sStatus(t) === 'in progress').length;
-    const blk = pts.filter(t => sStatus(t) === 'blocked').length;
-    const tot = pts.length;
-    const fp = tot ? Math.round(done / tot * 100) : 0;
-    const cls = fp === 100 ? 'fill-complete' : inprog > 0 ? 'fill-active' : 'fill-upcoming';
-    return `
-      <div class="phase-row">
-        <div class="phase-top">
-          <div class="phase-name">${p.name}</div>
-          <div class="phase-dates">${p.dates}</div>
-        </div>
-        <div class="phase-bar-bg"><div class="phase-bar-fill ${cls}" style="width:${fp}%"></div></div>
-        <div class="phase-stats">
-          <div class="phase-stat"><b>${done}</b> complete</div>
-          <div class="phase-stat"><b>${inprog}</b> in progress</div>
-          <div class="phase-stat"><b>${blk}</b> blocked</div>
-          <div class="phase-stat"><b>${tot}</b> total</div>
-        </div>
-      </div>`;
-  }).join('');
-
-  // Status rows
-  const statusDefs = [
-    { key:'not started',  label:'Not Started', color:'#5A7A9A' },
-    { key:'in progress',  label:'In Progress', color:'#1E6BAD' },
-    { key:'at risk',      label:'At Risk',     color:'#C47C1A' },
-    { key:'blocked',      label:'Blocked',     color:'#B33A2E' },
-    { key:'complete',     label:'Complete',    color:'#2D7A4F' },
-  ];
-  document.getElementById('status-rows').innerHTML = statusDefs.map(s => {
-    const c = counts[s.key] || 0;
-    const w = pct(c, total);
-    return `
-      <div class="status-row">
-        <div class="status-dot" style="background:${s.color}"></div>
-        <div class="status-name">${s.label}</div>
-        <div class="status-bar-bg"><div class="status-bar-fill" style="width:${w}%;background:${s.color}"></div></div>
-        <div class="status-count">${c}</div>
-      </div>`;
-  }).join('');
-
-  // Blocked
-  const blocked = allTasks.filter(t => sStatus(t) === 'blocked');
-  document.getElementById('blocked-badge').textContent = blocked.length + ' blocked';
-  document.getElementById('blocked-list').innerHTML = blocked.length === 0
-    ? '<div class="empty">✓ No blocked tasks</div>'
-    : blocked.map(t => {
-        const who = (t.assignees||[]).map(a => a.username || a.initials || '?').join(', ');
-        const due = t.due_date ? new Date(+t.due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-        return `
-          <div class="blocked-item">
-            <div class="blocked-dot"></div>
-            <div class="blocked-name">${t.name}</div>
-            <div class="blocked-who">${who || 'Unassigned'}</div>
-            ${due ? `<div class="blocked-due">${due}</div>` : ''}
-          </div>`;
-      }).join('');
-
-  // Milestones
-  const ms = allTasks.filter(t => /^[🏁🚀🎓]/.test(t.name))
-    .sort((a,b) => (+a.due_date||0) - (+b.due_date||0));
-  document.getElementById('milestone-badge').textContent = ms.length + ' milestones';
-  document.getElementById('milestone-list').innerHTML = ms.length === 0
-    ? '<div class="empty">No milestones found</div>'
-    : ms.map(t => {
-        const done = isDone(t);
-        const dueTs = +t.due_date || 0;
-        const overdue = !done && dueTs > 0 && dueTs < now;
-        const dueStr = dueTs ? new Date(dueTs).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-        const icon = done ? '✓' : overdue ? '⚠' : '◇';
-        const cls = done ? 'done' : overdue ? 'overdue' : '';
-        const badge = done
-          ? '<span class="ms-badge ms-done">Done</span>'
-          : overdue
-            ? '<span class="ms-badge ms-overdue">Overdue</span>'
-            : '<span class="ms-badge ms-upcoming">Upcoming</span>';
-        return `
-          <div class="milestone-item ${cls}">
-            <div class="ms-icon">${icon}</div>
-            <div class="ms-name ${done?'done':''}">${t.name}</div>
-            <div class="ms-date">${dueStr}</div>
-            ${badge}
-          </div>`;
-      }).join('');
-
-  // Team
-  const memberMap = {};
-  allTasks.forEach(t => {
-    const s = sStatus(t);
-    const d = isDone(t);
-    const b = s === 'blocked';
-    (t.assignees||[]).forEach(a => {
-      const em = a.email || '';
-      if (!memberMap[em]) memberMap[em] = {open:0, done:0, blocked:0};
-      if (d) memberMap[em].done++;
-      else if (b) memberMap[em].blocked++;
-      else memberMap[em].open++;
-    });
-  });
-
-  document.getElementById('team-grid').innerHTML = TEAM.map(m => {
-    const c = memberMap[m.email] || {open:0, done:0, blocked:0};
-    return `
-      <div class="team-card">
-        <div class="team-top">
-          <div class="team-avatar">${m.initials}</div>
-          <div class="team-info">
-            <div class="team-name">${m.name}</div>
-            <div class="team-role">${m.role}</div>
-          </div>
-        </div>
-        <div class="team-chips">
-          <span class="chip chip-open">${c.open} open</span>
-          <span class="chip chip-done">${c.done} done</span>
-          ${c.blocked ? `<span class="chip chip-blocked">${c.blocked} blocked</span>` : ''}
-        </div>
-      </div>`;
-  }).join('');
+function rBl(){
+  var td=tod(),bl=T.filter(function(t){return !t.completed&&t.due_on&&new Date(t.due_on+'T00:00:00')<td});
+  $('blc').textContent=bl.length;
+  $('blk').innerHTML=bl.length?bl.slice(0,6).map(function(t){return'<div class="bi"><div class="bk">'+t.name+'</div><div class="bd">'+ownOf(t)+' &middot; Overdue '+fmt(t.due_on)+'</div></div>'}).join(''):'<div class="emp" style="color:var(--green);font-weight:600">\u2713 No blockers</div>';
 }
-
-// Start
-window.addEventListener('load', init);
-</script>
-</body>
-</html>
+function rDu(){
+  var td=tod(),wk=new Date(td);wk.setDate(td.getDate()+7);
+  var du=T.filter(function(t){if(!t.due_on||t.completed)return false;return new Date(t.due_on+'T00:00:00')<=wk;}).sort(function(a,b){return new Date(a.due_on)-new Date(b.due_on)}).slice(0,12);
+  $('duc').textContent=du.length;
+  $('due').innerHTML=du.length?du.map(function(t){var d=dys(t.due_on),cl=d<0?'ov':d===0?'td':'',lb=d<0?Math.abs(d)+'d overdue':d===0?'Today':fmt(t.due_on);return'<div class="di"><div><div class="dn2">'+t.name+'</div><div class="dw">'+ownOf(t)+'</div></div><div class="dd '+cl+'">'+lb+'</div></div>';}).join(''):'<div class="emp">Nothing due this week</div>';
+}
+function rVl(){
+  var v=Array(7).fill(0).map(function(){return Math.floor(Math.random()*5)}),mx=Math.max.apply(null,v.concat([1]));
+  $('vel').innerHTML=v.map(function(n){return'<div class="vbr" style="height:'+Math.max(3,n/mx*56)+'px"></div>';}).join('');
+  var dn=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],s=(new Date().getDay()+1)%7;
+  $('vll').innerHTML=dn.slice(s).concat(dn.slice(0,s)).map(function(d){return'<span>'+d+'</span>';}).join('');
+}
+function rLd(){
+  var ps=['Phase 1','Phase 2','Phase 3'],ns=['Discovery','Build & Migration','Deploy'],cs=[phC('Phase 1'),phC('Phase 2'),phC('Phase 3')];
+  $('sm').innerHTML=ps.map(function(p,i){var pt=T.filter(function(t){return phOf(t)===p}),dn=pt.filter(function(t){return t.completed}).length,pct=pt.length?Math.round(dn/pt.length*100):0;return'<div class="sc" style="--sc:'+cs[i]+'"><div class="s2">'+p+'</div><div class="sp3">'+pct+'%</div><div class="slb">'+ns[i]+'</div></div>';}).join('');
+  var kws=['Platform Standup','Source Code Analysis','AI Capability Documentation','Analytics Layer - Data Architecture','Asset Deployment Testing','Gap Analysis & Work Plan','Experience & ILE Documentation','Asset Backup & Inventory'],td=tod();
+  $('gn').innerHTML=kws.map(function(w){var wt=T.filter(function(t){var x=wsOf(t);return x===w||x===w.replace(' - ','\u2014');}),ov=wt.some(function(t){return !t.completed&&t.due_on&&new Date(t.due_on+'T00:00:00')<td;}),dn=wt.length>0&&wt.filter(function(t){return t.completed;}).length===wt.length;var ic='\uD83D\uDFE2',st='Go';if(ov){ic='\uD83D\uDD34';st='At Risk';}else if(dn){ic='\u2705';st='Complete';}else if(!wt.length){ic='\u26AA';st='No Data';}return'<div class="gc"><div class="gi">'+ic+'</div><div class="gn">'+w.replace(' - ','\u2014')+'</div><div class="gs">'+st+'</div></div>';}).join('');
+  var ao=T.filter(function(t){return !t.completed&&t.due_on&&new Date(t.due_on+'T00:00:00')<td;});
+  $('gd').innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;padding:1.1rem"><div><div style="font-size:.67rem;font-weight:700;text-transform:uppercase;color:var(--gray);margin-bottom:.5rem">Upcoming Gates</div>'+M.filter(function(m){return !m.completed;}).slice(0,4).map(function(m){var d=dys(m.due_on);return'<div style="padding:.45rem 0;border-bottom:1px solid var(--border);font-size:.78rem"><span style="color:'+(d!==null&&d<=7?'var(--red)':'var(--ink)')+'">'+m.name+'</span><div style="font-size:.65rem;color:var(--gray);font-family:monospace">'+fmt(m.due_on)+(d!==null?' &middot; '+(d<0?Math.abs(d)+'d overdue':d+'d away'):'')+'</div></div>';}).join('')+'</div><div><div style="font-size:.67rem;font-weight:700;text-transform:uppercase;color:var(--red);margin-bottom:.5rem">At Risk ('+ao.length+')</div>'+(ao.length?ao.slice(0,4).map(function(t){return'<div style="padding:.45rem 0;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--red)">'+t.name+'<div style="font-size:.65rem;color:var(--gray)">'+ownOf(t)+'</div></div>';}).join(''):'<div style="font-size:.78rem;color:var(--green);padding:.45rem 0">\u2713 None</div>')+'</div><div><div style="font-size:.67rem;font-weight:700;text-transform:uppercase;color:var(--green);margin-bottom:.5rem">Complete</div><div style="font-size:1.6rem;font-weight:800;color:var(--green)">'+T.filter(function(t){return t.completed;}).length+'</div><div style="font-size:.75rem;color:var(--gray)">of '+T.length+' total tasks</div></div></div>';
+}
+function sv(v,b){document.querySelectorAll('.vb').forEach(function(x){x.classList.remove('on');});b.classList.add('on');$('cv').style.display=v==='c'?'block':'none';$('lv').style.display=v==='l'?'block':'none';}
+load();setInterval(load,5*60*1000);
+</script></body></html>
