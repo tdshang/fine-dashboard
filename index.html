@@ -209,7 +209,7 @@ body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(-
 <body>
 
 <script>
-var TOKEN = 'pk_156056280_4ILKY4AHP2HV9QIVUTYHAV2QDVB53A9G';
+var TOKEN = 'pk_156056280_V8C6SJCZNJAX9FS7PPDGMX6GS4N0PK0O';
 var SPACE_ID = '901313746539';
 </script>
 
@@ -367,21 +367,64 @@ function cu(path) {
 function msg(s){ document.getElementById('ld-msg').textContent=s; }
 
 async function fetchTasks(){
-  msg('Fetching project lists...');
-  const {lists=[]} = await cu('/space/'+SPACE_ID+'/list?archived=false');
-  const tasks=[];
-  for(let i=0;i<lists.length;i++){
-    const l=lists[i];
-    msg('Loading '+(i+1)+'/'+lists.length+': '+l.name+'...');
-    let pg=0;
-    while(true){
-      const {tasks:batch=[]}=await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=false');
-      batch.forEach(t=>{ t._lid=l.id; });
-      tasks.push(...batch);
-      if(batch.length<100) break;
-      pg++;
-    }
+  msg('Fetching project structure...');
+
+  // Step 1: get folders
+  let folders = [];
+  try {
+    const r = await cu('/space/'+SPACE_ID+'/folder?archived=false');
+    folders = r.folders || [];
+  } catch(e) { console.warn('folder fetch failed', e); }
+
+  // Step 2: get folderless lists
+  let spaceLists = [];
+  try {
+    const r = await cu('/space/'+SPACE_ID+'/list?archived=false');
+    spaceLists = r.lists || [];
+  } catch(e) { console.warn('space list fetch failed', e); }
+
+  // Step 3: get lists inside each folder
+  const folderLists = [];
+  for(const f of folders){
+    try {
+      const r = await cu('/folder/'+f.id+'/list?archived=false');
+      const lists = r.lists || [];
+      lists.forEach(l=>{ l._folderId=f.id; });
+      folderLists.push(...lists);
+    } catch(e) { console.warn('folder list fetch failed for', f.id, e); }
   }
+
+  const allLists = [...spaceLists, ...folderLists];
+  console.log('Total lists found:', allLists.length, allLists.map(l=>l.name));
+
+  if(allLists.length === 0) throw new Error('No lists found in space '+SPACE_ID+'. Check your Space ID and token.');
+
+  // Step 4: fetch tasks from every list
+  const tasks = [];
+  const seen = new Set();
+  for(let i=0;i<allLists.length;i++){
+    const l=allLists[i];
+    msg('Loading '+(i+1)+'/'+allLists.length+': '+l.name+'...');
+    let pg=0;
+    try {
+      while(true){
+        const r = await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=false');
+        const batch = r.tasks || [];
+        batch.forEach(t=>{
+          if(!seen.has(t.id)){
+            seen.add(t.id);
+            t._lid=l.id;
+            tasks.push(t);
+          }
+        });
+        if(batch.length<100) break;
+        pg++;
+      }
+    } catch(e) { console.warn('task fetch failed for list', l.id, e); }
+  }
+
+  console.log('Total tasks fetched:', tasks.length);
+  if(tasks.length === 0) throw new Error('No tasks found. Verify your API token has access to Space '+SPACE_ID);
   return tasks;
 }
 
