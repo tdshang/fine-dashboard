@@ -209,7 +209,7 @@ body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(-
 <body>
 
 <script>
-var TOKEN = 'pk_156056280_V8C6SJCZNJAX9FS7PPDGMX6GS4N0PK0O';
+var TOKEN = 'pk_156056280_28EFHEYA8UPOAB9OA8O3CPGL7XPOUJVO';
 var SPACE_ID = '901313746539';
 </script>
 
@@ -454,8 +454,12 @@ function set(id,v){ document.getElementById(id).textContent=v; }
 
 function render(){
   const now=Date.now();
-  const today=new Date(); today.setHours(0,0,0,0);
+  // Use UTC midnight to avoid timezone boundary issues with ClickUp timestamps
+  const now2 = new Date();
+  const today=new Date(now2.getFullYear(), now2.getMonth(), now2.getDate(), 0,0,0,0);
+  const todayTs = today.getTime();
   const weekEnd=new Date(today); weekEnd.setDate(today.getDate()+7);
+  const weekEndTs = weekEnd.getTime();
 
   // Countdown
   set('cd-n',Math.ceil((RETREAT-now)/86400000));
@@ -570,8 +574,8 @@ function render(){
         const dayNum=dt.getDate();
         const mon=dt.toLocaleDateString('en-US',{month:'short'});
         const dtDay=new Date(dt); dtDay.setHours(0,0,0,0);
-        const isOverdue=dtDay<today;
-        const isToday=dtDay.getTime()===today.getTime();
+        const isOverdue=dtDay.getTime() < todayTs;
+        const isToday=dtDay.getTime()===todayTs;
         const cls=isOverdue?'overdue':isToday?'today':'';
         const tag=isOverdue?'<span class="dw-tag dt-overdue">Overdue</span>':isToday?'<span class="dw-tag dt-today">Today</span>':'<span class="dw-tag dt-soon">This week</span>';
         const who=(t.assignees||[]).map(a=>a.username||a.initials||'?').join(', ');
@@ -590,8 +594,9 @@ function render(){
     const d=isDone(t), bl=ss(t)==='blocked', ip=ss(t)==='in progress';
     const dt=+t.due_date||0;
     const taskDt=new Date(dt); taskDt.setHours(0,0,0,0);
-    const isOverdue=!d&&dt>0&&taskDt<today;
-    const isDueThisWeek=!d&&dt>0&&taskDt>=today&&taskDt<=weekEnd;
+    // A task is overdue if its due date (start of that day) is before today's start
+    const isOverdue=!d && dt>0 && taskDt.getTime() < todayTs;
+    const isDueThisWeek=!d && dt>0 && taskDt.getTime()>=todayTs && taskDt.getTime()<=weekEndTs;
     (t.assignees||[]).forEach(a=>{
       const e=a.email||'';
       if(!mm[e]) mm[e]={done:0,inprogress:0,blocked:0,overdue:0,dueThisWeek:0,total:0};
@@ -608,29 +613,24 @@ function render(){
     const c=mm[m.email]||{done:0,inprogress:0,blocked:0,overdue:0,dueThisWeek:0,total:0};
 
     // Health signal — only flag genuine problems
-    // Overdue = past due date and not done (real problem)
-    // Blocked = cannot proceed (real problem)
-    // Monitor = 1+ overdue OR blocked (needs attention)
-    // Moving = has in-progress tasks, nothing overdue/blocked
-    // Queued = assigned tasks but nothing started yet
-    // No tasks = not yet assigned to anything active
+    // ⚠ Needs attention = 2+ overdue OR 2+ blocked
+    // → Monitor       = 1+ overdue OR 1+ blocked (something is actually stuck)
+    // ✓ Moving        = has in-progress tasks, zero overdue, zero blocked
+    // · Queued        = assigned but nothing in progress yet (normal at project start)
+    // — No tasks      = nothing assigned yet
+    // NOTE: dueThisWeek is NOT a health signal — having upcoming work is normal
     let hcls='hp-idle', htxt='No tasks', hicon='—';
     const hasWork = c.total>0 || c.done>0;
     if(hasWork){
-      if(c.overdue>1 || c.blocked>1){
-        // Multiple overdue or blocked = needs immediate attention
+      if(c.overdue>=2 || c.blocked>=2){
         hcls='hp-bad'; htxt='Needs attention'; hicon='⚠';
-      } else if(c.overdue===1 || c.blocked===1){
-        // One overdue or one blocked = worth monitoring
+      } else if(c.overdue>=1 || c.blocked>=1){
         hcls='hp-warn'; htxt='Monitor'; hicon='→';
       } else if(c.inprogress>0){
-        // Active work, nothing overdue or blocked = good
         hcls='hp-good'; htxt='Moving'; hicon='✓';
-      } else if(c.done>0 && c.total===0){
-        // All done, nothing open
+      } else if(c.done>0 && c.inprogress===0 && c.total===0){
         hcls='hp-good'; htxt='Up to date'; hicon='✓';
       } else {
-        // Has tasks assigned but nothing started yet
         hcls='hp-idle'; htxt='Queued'; hicon='·';
       }
     }
