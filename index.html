@@ -607,14 +607,32 @@ function render(){
   document.getElementById('team-tbody').innerHTML = TEAM.map(m=>{
     const c=mm[m.email]||{done:0,inprogress:0,blocked:0,overdue:0,dueThisWeek:0,total:0};
 
-    // Health signal
+    // Health signal — only flag genuine problems
+    // Overdue = past due date and not done (real problem)
+    // Blocked = cannot proceed (real problem)
+    // Monitor = 1+ overdue OR blocked (needs attention)
+    // Moving = has in-progress tasks, nothing overdue/blocked
+    // Queued = assigned tasks but nothing started yet
+    // No tasks = not yet assigned to anything active
     let hcls='hp-idle', htxt='No tasks', hicon='—';
-    if(c.total>0||c.done>0){
-      if(c.overdue>0||c.blocked>1){ hcls='hp-bad'; htxt='Needs attention'; hicon='⚠'; }
-      else if(c.blocked===1||c.dueThisWeek>3){ hcls='hp-warn'; htxt='Monitor'; hicon='→'; }
-      else if(c.inprogress>0){ hcls='hp-good'; htxt='Moving'; hicon='✓'; }
-      else if(c.done>0&&c.inprogress===0&&c.total===0){ hcls='hp-good'; htxt='Up to date'; hicon='✓'; }
-      else { hcls='hp-idle'; htxt='Queued'; hicon='·'; }
+    const hasWork = c.total>0 || c.done>0;
+    if(hasWork){
+      if(c.overdue>1 || c.blocked>1){
+        // Multiple overdue or blocked = needs immediate attention
+        hcls='hp-bad'; htxt='Needs attention'; hicon='⚠';
+      } else if(c.overdue===1 || c.blocked===1){
+        // One overdue or one blocked = worth monitoring
+        hcls='hp-warn'; htxt='Monitor'; hicon='→';
+      } else if(c.inprogress>0){
+        // Active work, nothing overdue or blocked = good
+        hcls='hp-good'; htxt='Moving'; hicon='✓';
+      } else if(c.done>0 && c.total===0){
+        // All done, nothing open
+        hcls='hp-good'; htxt='Up to date'; hicon='✓';
+      } else {
+        // Has tasks assigned but nothing started yet
+        hcls='hp-idle'; htxt='Queued'; hicon='·';
+      }
     }
 
     const num=(v,cls='')=>v>0?`<div class="tm-num" style="${cls?'color:'+cls:''}">${v}</div>`:`<div class="tm-zero">—</div>`;
