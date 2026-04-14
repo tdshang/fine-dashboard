@@ -294,7 +294,7 @@ body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(-
 <body>
 
 <script>
-var TOKEN = 'pk_156056280_LDRARAWGYSYL46GQE85BE7HZ66U0DKXV';
+var TOKEN = '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';
 var SPACE_ID = '901313746539';
 // GitHub config for triggering the Actions workflow
 var GITHUB_OWNER = 'tdshang';
@@ -604,6 +604,21 @@ function isDone(t){ const s=ss(t); return s==='complete'||s==='closed'; }
 function pct(n,d){ return d?Math.round(n/d*100):0; }
 function set(id,v){ document.getElementById(id).textContent=v; }
 
+// ── getWsTasks — defined globally so openWorkstream can call it ──────────
+function getWsTasks(ws) {
+  const wt=[], seen=new Set();
+  const add = t => { if(!seen.has(t.id)){ seen.add(t.id); wt.push(t); } };
+  if(hasWsData && ws.wsKeys) {
+    ws.wsKeys.forEach(key=>{ (wsTaskMap['ws:'+key.trim()]||[]).forEach(add); });
+  } else {
+    ws.listIds.forEach(lid=>{ (wsTaskMap['lid:'+lid]||[]).forEach(add); });
+  }
+  return wt;
+}
+
+// hasWsData is set during render() — needs to be global too
+let hasWsData = false;
+
 function render(){
   const now=Date.now();
   // Use UTC midnight to avoid timezone boundary issues with ClickUp timestamps
@@ -662,24 +677,11 @@ function render(){
     wsTaskMap[lkey].push(t);
   });
 
-  // Determine if we have custom field data available
-  const hasWsData = allTasks.some(t => t._workstream);
+  // Determine if we have custom field data available (updates global)
+  hasWsData = allTasks.some(t => t._workstream);
   console.log('Workstream custom field data available:', hasWsData);
 
   // Only show workstreams with at least 1 task assigned
-  function getWsTasks(ws) {
-    const wt=[], seen=new Set();
-    const add = t => { if(!seen.has(t.id)){ seen.add(t.id); wt.push(t); } };
-    if(hasWsData && ws.wsKeys) {
-      // Use custom field data — accurate workstream separation
-      ws.wsKeys.forEach(key=>{ (wsTaskMap['ws:'+key.trim()]||[]).forEach(add); });
-    } else {
-      // Fall back to list ID mapping
-      ws.listIds.forEach(lid=>{ (wsTaskMap['lid:'+lid]||[]).forEach(add); });
-    }
-    return wt;
-  }
-
   const activeWorkstreams = WORKSTREAMS.filter(ws => getWsTasks(ws).length > 0);
   set('ws-sb', activeWorkstreams.length+' active workstreams');
 
