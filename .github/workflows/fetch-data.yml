@@ -2,7 +2,7 @@ name: Refresh FINE Dashboard
 
 on:
   schedule:
-    - cron: '0 12 * * *'  # 7:00 AM Central (12:00 UTC)
+    - cron: '0 12 * * *'
   workflow_dispatch:
 
 permissions:
@@ -15,19 +15,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build dashboard
-        env:
-          CLICKUP_TOKEN: ${{ secrets.CLICKUP_TOKEN }}
-          SPACE_ID: '901313746539'
-          WORKSPACE_ID: '90132046480'
+      - name: Write build script
         run: |
-          node << 'SCRIPT'
+          cat > build.js << 'JSEOF'
+          // build.js — fetches ClickUp data and generates index.html
           const https = require('https');
-          const fs   = require('fs');
+          const fs = require('fs');
 
-          const TOKEN   = process.env.CLICKUP_TOKEN;
-          const SPACE   = process.env.SPACE_ID;
-
+          const TOKEN = process.env.CLICKUP_TOKEN;
+          const SPACE = process.env.SPACE_ID;
           const WORKSTREAM_FIELD = 'bde6b5f2-d0e0-4fe5-98d8-0ebf7d6c76b4';
           const RETREAT = new Date('2026-07-28');
 
@@ -36,21 +32,50 @@ jobs:
             '901318021855','901318021857','901318021858'
           ];
 
-          const TEAM = [
-            {email:'tshang@optimaed.com',    name:'Tina Shang',      role:'DET',     initials:'TS'},
-            {email:'vjordan@optimaed.com',   name:'Vince Jordan',    role:'CTO',     initials:'VJ'},
-            {email:'doverby@optimaed.com',   name:'Dylan Overby',    role:'TL/PD',   initials:'DO'},
-            {email:'jstiles@optimaed.com',   name:'Jay Stiles',      role:'AI/FSD',  initials:'JS'},
-            {email:'hmangrum@optimaed.com',  name:'Heather Mangrum', role:'UD',      initials:'HM'},
-            {email:'rbezzina@optimaed.com',  name:'Rachel Bezzina',  role:'Video',   initials:'RB'},
-            {email:'scozart@optimaed.com',   name:'Sydney Carter',   role:'Asset',   initials:'SC'},
-            {email:'gwarren@optimaed.com',   name:'Gabe Warren',     role:'Asset',   initials:'GW'},
-            {email:'jolson@optimaed.com',    name:'Jonathan Olson',  role:'SME Lead',initials:'JO'},
-            {email:'rwalker@optimaed.com',   name:'Ryan Walker',     role:'SME',     initials:'RW'},
-            {email:'sdevereaux@optimaed.com',name:'Sarah Devereaux', role:'SME',     initials:'SD'},
-            {email:'jbergel@optimaed.com',   name:'Jessica Bergel',  role:'SME',     initials:'JB'},
-            {email:'hduley@optimaed.com',    name:'Heather Duley',   role:'SME',     initials:'HD'},
-          ];
+          const TEAM_INFO = {
+            'tshang@optimaed.com':    {name:'Tina Shang',      role:'DET',     initials:'TS'},
+            'vjordan@optimaed.com':   {name:'Vince Jordan',    role:'CTO',     initials:'VJ'},
+            'doverby@optimaed.com':   {name:'Dylan Overby',    role:'TL/PD',   initials:'DO'},
+            'jstiles@optimaed.com':   {name:'Jay Stiles',      role:'AI/FSD',  initials:'JS'},
+            'hmangrum@optimaed.com':  {name:'Heather Mangrum', role:'UD',      initials:'HM'},
+            'rbezzina@optimaed.com':  {name:'Rachel Bezzina',  role:'Video',   initials:'RB'},
+            'scozart@optimaed.com':   {name:'Sydney Carter',   role:'Asset',   initials:'SC'},
+            'gwarren@optimaed.com':   {name:'Gabe Warren',     role:'Asset',   initials:'GW'},
+            'jolson@optimaed.com':    {name:'Jonathan Olson',  role:'SME Lead',initials:'JO'},
+            'rwalker@optimaed.com':   {name:'Ryan Walker',     role:'SME',     initials:'RW'},
+            'sdevereaux@optimaed.com':{name:'Sarah Devereaux', role:'SME',     initials:'SD'},
+            'jbergel@optimaed.com':   {name:'Jessica Bergel',  role:'SME',     initials:'JB'},
+            'hduley@optimaed.com':    {name:'Heather Duley',   role:'SME',     initials:'HD'},
+          };
+
+          const TEAM_LIST = Object.entries(TEAM_INFO).map(([email,v]) => ({email,...v}));
+
+          const WS_ORDER = ['ENGAGE Documentation','Asset Migration','Project Oversight',
+            'Sprint 0 Audit',' Sprint 0 Audit','AI Avatars','Platform Integration',
+            'K-12 Account Model','Forms System','Canvas LTI','COPPA/FERPA',
+            'Education Environments','Experience & ILE','Web Companion',
+            'Media Library','Analytics Layer','Training','QA & Deployment'];
+
+          const WS_COLORS = {
+            'ENGAGE Documentation':'#3e85c7','Asset Migration':'#D4A847',
+            'Project Oversight':'#0091ff','Sprint 0 Audit':'#6647f0',
+            ' Sprint 0 Audit':'#6647f0','AI Avatars':'#2ABCB0',
+            'Platform Integration':'#FF4081','K-12 Account Model':'#8dcec3',
+            'Forms System':'#7C4DFF','Canvas LTI':'#b6b6ff',
+            'COPPA/FERPA':'#96c7f2','Education Environments':'#E09828',
+            'Experience & ILE':'#ffaa7d','Web Companion':'#3e63dd',
+            'Media Library':'#ab4aba','Analytics Layer':'#30a46c',
+            'Training':'#27B97C','QA & Deployment':'#F0C96A'
+          };
+
+          const AV_COLORS = ['#3A9CE4','#27B97C','#D4A847','#DC4E4E','#8B70E6',
+            '#2ABCB0','#F0A040','#E05C9A','#6647f0','#30a46c','#ab4aba','#3e63dd','#0091ff'];
+
+          function avColor(initials) {
+            let h = 0;
+            for (const c of initials) h = (h * 31 + c.charCodeAt(0)) % AV_COLORS.length;
+            return AV_COLORS[Math.abs(h) % AV_COLORS.length];
+          }
 
           function get(path) {
             return new Promise((res, rej) => {
@@ -62,7 +87,7 @@ jobs:
                   r.on('data', c => d += c);
                   r.on('end', () => {
                     try { res(JSON.parse(d)); }
-                    catch(e) { rej(new Error('Parse error: '+d.slice(0,120))); }
+                    catch(e) { rej(new Error('Parse: '+d.slice(0,100))); }
                   });
                 }
               );
@@ -71,92 +96,103 @@ jobs:
             });
           }
 
-          function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+          function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+          function pct(n,d) { return d ? Math.round(n/d*100) : 0; }
+          function ss(t) { return (t.status && t.status.status ? t.status.status : '').toLowerCase().trim(); }
+          function isDone(t) { const s = ss(t); return s === 'complete' || s === 'closed'; }
+
+          function fmtDate(ts) {
+            if (!ts) return '';
+            return new Date(+ts).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+          }
+
+          function pName(email) {
+            const info = TEAM_INFO[email];
+            return info ? info.name.split(' ')[0] : email.split('@')[0];
+          }
+
+          function pInitials(email) {
+            return (TEAM_INFO[email] || {initials:'?'}).initials;
+          }
 
           async function fetchAllTasks() {
             const allLists = [];
             for (const fid of KNOWN_FOLDERS) {
               try {
                 const r = await get('/folder/'+fid+'/list?archived=false');
-                (r.lists||[]).forEach(l => { l._folderId=fid; allLists.push(l); });
-              } catch(e) { console.warn('folder',fid,e.message); }
+                (r.lists||[]).forEach(l => { l._folderId = fid; allLists.push(l); });
+              } catch(e) { console.warn('folder '+fid+': '+e.message); }
             }
             try {
               const r = await get('/space/'+SPACE+'/list?archived=false');
               (r.lists||[]).forEach(l => allLists.push(l));
             } catch(e) {}
 
-            const tasks=[], seen=new Set();
-            for (let i=0; i<allLists.length; i++) {
+            console.log('Lists found: '+allLists.length);
+
+            const tasks = [], seen = new Set();
+            for (let i = 0; i < allLists.length; i++) {
               const l = allLists[i];
-              console.log(`List ${i+1}/${allLists.length}: ${l.name}`);
+              console.log('List '+(i+1)+'/'+allLists.length+': '+l.name);
               let pg = 0;
               while (true) {
                 try {
-                  const r = await get(`/list/${l.id}/task?page=${pg}&include_closed=true&subtasks=true`);
-                  const batch = r.tasks||[];
+                  const r = await get('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=true');
+                  const batch = r.tasks || [];
                   batch.forEach(t => {
                     if (!seen.has(t.id)) {
                       seen.add(t.id);
                       t._lid = l.id;
-                      t._folderId = l._folderId||null;
+                      t._folderId = l._folderId || null;
                       tasks.push(t);
                     }
                   });
                   if (batch.length < 100) break;
                   pg++;
-                } catch(e) { console.warn('list',l.id,e.message); break; }
+                } catch(e) { console.warn('list '+l.id+': '+e.message); break; }
               }
-              if (i > 0 && i % 10 === 0) await sleep(500);
+              if (i > 0 && i % 10 === 0) await sleep(300);
             }
             return tasks;
           }
 
           async function enrichCustomFields(tasks) {
-            console.log('Enriching custom fields for top-level tasks...');
             const topLevel = tasks.filter(t => !t.parent);
-            let done=0;
-            for (let i=0; i<topLevel.length; i++) {
+            console.log('Enriching '+topLevel.length+' top-level tasks...');
+            let done = 0;
+            for (let i = 0; i < topLevel.length; i++) {
               const t = topLevel[i];
               try {
-                const r = await get(`/task/${t.id}?custom_fields=true`);
+                const r = await get('/task/'+t.id+'?custom_fields=true');
                 if (r.custom_fields) {
-                  const ws = r.custom_fields.find(f=>f.id===WORKSTREAM_FIELD);
+                  const ws = r.custom_fields.find(f => f.id === WORKSTREAM_FIELD);
                   if (ws && ws.value) {
-                    t._workstream = ws.value.name||ws.value;
-                    t._workstream_id = ws.value.id||ws.value;
+                    t._workstream = ws.value.name || ws.value;
                   }
                 }
                 done++;
               } catch(e) {}
               if (i > 0 && i % 50 === 0) {
-                console.log(`Enriched ${done}/${topLevel.length}`);
-                await sleep(800);
+                console.log('Enriched '+done+'/'+topLevel.length);
+                await sleep(600);
               }
             }
-            // Propagate workstream to subtasks from parent
+            // Propagate workstream to subtasks
             const taskMap = {};
-            tasks.forEach(t => taskMap[t.id]=t);
+            tasks.forEach(t => { taskMap[t.id] = t; });
             tasks.forEach(t => {
               if (t.parent && !t._workstream) {
-                const parent = taskMap[t.parent];
-                if (parent && parent._workstream) {
-                  t._workstream = parent._workstream;
-                  t._workstream_id = parent._workstream_id;
-                }
+                const p = taskMap[t.parent];
+                if (p && p._workstream) t._workstream = p._workstream;
               }
             });
-            console.log('Custom fields enriched');
+            console.log('Enrichment complete');
           }
 
-          function ss(t){ return (t.status?.status||'').toLowerCase().trim(); }
-          function isDone(t){ const s=ss(t); return s==='complete'||s==='closed'; }
-
           async function main() {
-            console.log('Fetching tasks...');
+            console.log('Starting...');
             const tasks = await fetchAllTasks();
-            console.log(`Total tasks: ${tasks.length}`);
-
+            console.log('Total tasks: '+tasks.length);
             await enrichCustomFields(tasks);
 
             const now = Date.now();
@@ -165,698 +201,524 @@ jobs:
             const weekEnd = new Date(today); weekEnd.setDate(today.getDate()+7);
             const weekEndTs = weekEnd.getTime();
             const weekStart = new Date(today); weekStart.setDate(today.getDate()-7);
+            const weekStartTs = weekStart.getTime();
 
             // Status counts
             let complete=0,inprogress=0,notstarted=0,atrisk=0,blocked=0,overdue=0;
             tasks.forEach(t => {
-              const s=ss(t);
-              const d=isDone(t);
-              const dt=+t.due_date||0;
-              const tDt=new Date(dt); tDt.setHours(0,0,0,0);
-              if(d) complete++;
-              else if(s==='in progress') inprogress++;
-              else if(s==='at risk') atrisk++;
-              else if(s==='blocked') blocked++;
+              const s = ss(t), d = isDone(t);
+              const dt = +t.due_date||0;
+              const tDt = new Date(dt); tDt.setHours(0,0,0,0);
+              if (d) complete++;
+              else if (s === 'in progress') inprogress++;
+              else if (s === 'at risk') atrisk++;
+              else if (s === 'blocked') blocked++;
               else notstarted++;
-              if(!d && dt>0 && tDt.getTime()<todayTs) overdue++;
+              if (!d && dt > 0 && tDt.getTime() < todayTs) overdue++;
             });
             const total = tasks.length;
-            const completePct = total ? Math.round(complete/total*100) : 0;
-            const daysToRetreat = Math.ceil((RETREAT-now)/86400000);
+            const completePct = pct(complete, total);
+            const daysToRetreat = Math.ceil((RETREAT - now) / 86400000);
 
             // Workstreams
             const wsMap = {};
             tasks.forEach(t => {
-              const ws = t._workstream || 'Unassigned';
-              if(!wsMap[ws]) wsMap[ws]={name:ws,complete:0,inprogress:0,notstarted:0,atrisk:0,blocked:0,total:0};
-              const s=ss(t);
+              const ws = t._workstream || null;
+              if (!ws) return;
+              if (!wsMap[ws]) wsMap[ws] = {name:ws,complete:0,inprogress:0,notstarted:0,atrisk:0,blocked:0,total:0};
+              const s = ss(t);
               wsMap[ws].total++;
-              if(isDone(t)) wsMap[ws].complete++;
-              else if(s==='in progress') wsMap[ws].inprogress++;
-              else if(s==='at risk') wsMap[ws].atrisk++;
-              else if(s==='blocked') wsMap[ws].blocked++;
+              if (isDone(t)) wsMap[ws].complete++;
+              else if (s === 'in progress') wsMap[ws].inprogress++;
+              else if (s === 'at risk') wsMap[ws].atrisk++;
+              else if (s === 'blocked') wsMap[ws].blocked++;
               else wsMap[ws].notstarted++;
             });
 
-            // Sort workstreams by project flow order
-            const WS_ORDER = [
-              'ENGAGE Documentation','Asset Migration','Project Oversight',
-              'Sprint 0 Audit',' Sprint 0 Audit','AI Avatars','Platform Integration',
-              'K-12 Account Model','Forms System','Canvas LTI','COPPA/FERPA',
-              'Education Environments','Experience & ILE','Web Companion',
-              'Media Library','Analytics Layer','Training','QA & Deployment'
-            ];
             const workstreams = Object.values(wsMap)
-              .filter(w => w.name !== 'Unassigned' && w.total > 0)
-              .sort((a,b) => {
+              .filter(w => w.total > 0)
+              .sort((a, b) => {
                 const ai = WS_ORDER.indexOf(a.name.trim());
                 const bi = WS_ORDER.indexOf(b.name.trim());
-                if(ai===-1 && bi===-1) return a.name.localeCompare(b.name);
-                if(ai===-1) return 1;
-                if(bi===-1) return -1;
-                return ai-bi;
+                if (ai === -1 && bi === -1) return a.name.localeCompare(b.name);
+                if (ai === -1) return 1;
+                if (bi === -1) return -1;
+                return ai - bi;
               });
 
             // Team stats
             const teamMap = {};
             tasks.forEach(t => {
-              const d=isDone(t), bl=ss(t)==='blocked', ip=ss(t)==='in progress';
-              const dt=+t.due_date||0;
-              const tDt=new Date(dt); tDt.setHours(0,0,0,0);
-              const isOver=!d&&dt>0&&tDt.getTime()<todayTs;
-              const isDueWeek=!d&&dt>0&&tDt.getTime()>=todayTs&&tDt.getTime()<=weekEndTs;
-              const workedThisWeek=+t.date_updated>=weekStart.getTime();
-              const completedThisWeek=d&&+t.date_closed>=weekStart.getTime();
+              const d = isDone(t), s = ss(t);
+              const dt = +t.due_date||0;
+              const tDt = new Date(dt); tDt.setHours(0,0,0,0);
+              const isOver = !d && dt > 0 && tDt.getTime() < todayTs;
+              const isDueWeek = !d && dt > 0 && tDt.getTime() >= todayTs && tDt.getTime() <= weekEndTs;
+              const upd = +t.date_updated||0;
+              const closed = +t.date_closed||0;
+              const workedOn = !d && upd >= weekStartTs;
+              const completedThisWeek = d && closed >= weekStartTs;
               (t.assignees||[]).forEach(a => {
-                const e=a.email||'';
-                if(!teamMap[e]) teamMap[e]={open:0,done:0,blocked:0,overdue:0,dueThisWeek:0,inprogress:0,workedOn:0,completedThisWeek:0};
-                if(d) teamMap[e].done++;
-                if(bl) teamMap[e].blocked++;
-                if(ip) teamMap[e].inprogress++;
-                if(isOver) teamMap[e].overdue++;
-                if(isDueWeek) teamMap[e].dueThisWeek++;
-                if(workedThisWeek && !d) teamMap[e].workedOn++;
-                if(completedThisWeek) teamMap[e].completedThisWeek++;
-                if(!d) teamMap[e].open++;
+                const e = a.email||'';
+                if (!teamMap[e]) teamMap[e] = {open:0,done:0,blocked:0,overdue:0,dueThisWeek:0,inprogress:0,workedOn:0,completedThisWeek:0};
+                if (!d) teamMap[e].open++;
+                if (d) teamMap[e].done++;
+                if (s === 'blocked') teamMap[e].blocked++;
+                if (s === 'in progress') teamMap[e].inprogress++;
+                if (isOver) teamMap[e].overdue++;
+                if (isDueWeek) teamMap[e].dueThisWeek++;
+                if (workedOn) teamMap[e].workedOn++;
+                if (completedThisWeek) teamMap[e].completedThisWeek++;
               });
             });
 
-            // Completed this week
-            const completedThisWeek = tasks
-              .filter(t => isDone(t) && +t.date_closed >= weekStart.getTime())
-              .sort((a,b)=>+b.date_closed - +a.date_closed)
-              .slice(0, 20);
+            const workedThisWeek = Object.entries(teamMap)
+              .filter(([e,c]) => c.workedOn > 0)
+              .sort((a,b) => b[1].workedOn - a[1].workedOn);
 
-            // Due this week
+            const completedByPerson = Object.entries(teamMap)
+              .filter(([e,c]) => c.completedThisWeek > 0)
+              .sort((a,b) => b[1].completedThisWeek - a[1].completedThisWeek);
+
             const dueThisWeek = tasks
               .filter(t => {
-                if(isDone(t)) return false;
-                const dt=+t.due_date||0;
-                const tDt=new Date(dt); tDt.setHours(0,0,0,0);
-                return dt>0 && tDt.getTime()<=weekEndTs;
+                if (isDone(t)) return false;
+                const dt = +t.due_date||0;
+                if (!dt) return false;
+                const tDt = new Date(dt); tDt.setHours(0,0,0,0);
+                return tDt.getTime() <= weekEndTs;
               })
-              .sort((a,b)=>+a.due_date - +b.due_date)
+              .sort((a,b) => +a.due_date - +b.due_date)
               .slice(0, 30);
 
-            // Blocked tasks
-            const blockedTasks = tasks.filter(t=>ss(t)==='blocked').slice(0,20);
+            const blockedTasks = tasks.filter(t => ss(t) === 'blocked').slice(0, 20);
 
-            // Milestones
             const milestones = tasks
-              .filter(t=>/^[🏁🚀🎓]/.test(t.name))
-              .sort((a,b)=>(+a.due_date||0)-(+b.due_date||0));
+              .filter(t => /^[\u{1F3C1}\u{1F680}\u{1F393}]/u.test(t.name))
+              .sort((a,b) => (+a.due_date||0) - (+b.due_date||0));
 
-            // Activity (tasks updated today)
             const todayActivity = tasks
-              .filter(t=>+t.date_updated >= todayTs)
-              .sort((a,b)=>+b.date_updated - +a.date_updated)
-              .slice(0,15);
+              .filter(t => (+t.date_updated||0) >= todayTs)
+              .sort((a,b) => (+b.date_updated) - (+a.date_updated))
+              .slice(0, 10);
 
-            console.log('Rendering HTML...');
-
-            const fetchedAt = new Date().toLocaleString('en-US',{
+            const fetchedAt = new Date().toLocaleString('en-US', {
               timeZone:'America/Chicago',
               weekday:'long', month:'long', day:'numeric',
               hour:'2-digit', minute:'2-digit', timeZoneName:'short'
             });
 
-            // Build HTML
-            const html = buildHTML({
-              fetchedAt, daysToRetreat, completePct,
-              total, complete, inprogress, notstarted, atrisk, blocked, overdue,
-              workstreams, teamMap, completedThisWeek, dueThisWeek,
-              blockedTasks, milestones, todayActivity, today, todayTs
+            console.log('Rendering HTML...');
+            const html = render({
+              fetchedAt, daysToRetreat, completePct, total, complete,
+              inprogress, notstarted, atrisk, blocked, overdue,
+              workstreams, teamMap, workedThisWeek, completedByPerson,
+              dueThisWeek, blockedTasks, milestones, todayActivity,
+              todayTs
             });
 
             fs.writeFileSync('index.html', html);
-            console.log('index.html written successfully');
+            console.log('Done — index.html written');
           }
 
-          function pct(n,d){ return d?Math.round(n/d*100):0; }
-
-          function fmtDate(ts){
-            if(!ts) return '';
-            return new Date(+ts).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+          function esc(str) {
+            return String(str||'')
+              .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+              .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           }
 
-          function timeAgo(ts){
-            const diff = Date.now() - +ts;
-            const mins = Math.round(diff/60000);
-            if(mins < 60) return mins+'m ago';
-            const hrs = Math.round(diff/3600000);
-            if(hrs < 24) return hrs+'h ago';
-            return Math.round(diff/86400000)+'d ago';
+          function numCell(v, color) {
+            if (!v) return '<td class="tc tc-zero">—</td>';
+            return '<td class="tc"><span style="color:'+color+'">'+v+'</span></td>';
           }
 
-          function buildHTML(d) {
+          function render(d) {
             const {fetchedAt,daysToRetreat,completePct,total,complete,inprogress,
                    notstarted,atrisk,blocked,overdue,workstreams,teamMap,
-                   completedThisWeek,dueThisWeek,blockedTasks,milestones,
-                   todayActivity,today,todayTs} = d;
+                   workedThisWeek,completedByPerson,dueThisWeek,blockedTasks,
+                   milestones,todayActivity,todayTs} = d;
 
-            // Worked this week from teamMap
-            const workedThisWeek = Object.entries(teamMap)
-              .filter(([e,c])=>c.workedOn>0)
-              .sort((a,b)=>b[1].workedOn-a[1].workedOn);
+            const wsRows = workstreams.map(ws => {
+              const cp = pct(ws.complete, ws.total);
+              const ip = pct(ws.inprogress, ws.total);
+              const bp = pct(ws.blocked, ws.total);
+              const ap = pct(ws.atrisk, ws.total);
+              const np = Math.max(0, 100-cp-ip-bp-ap);
+              const color = WS_COLORS[ws.name.trim()] || '#5A7A9A';
+              return '<div class="ws-row">'
+                + '<div class="ws-name" title="'+esc(ws.name)+'">'+esc(ws.name)+'</div>'
+                + '<div class="ws-bar-wrap">'
+                + (ws.complete > 0 ? '<div class="ws-seg" style="width:'+cp+'%;background:#27B97C"></div>' : '')
+                + (ws.inprogress > 0 ? '<div class="ws-seg" style="width:'+ip+'%;background:#3B9FE8"></div>' : '')
+                + (ws.atrisk > 0 ? '<div class="ws-seg" style="width:'+ap+'%;background:#E09828"></div>' : '')
+                + (ws.blocked > 0 ? '<div class="ws-seg" style="width:'+bp+'%;background:#E04E4E"></div>' : '')
+                + (np > 0 ? '<div class="ws-seg" style="width:'+np+'%;background:rgba(255,255,255,0.06)"></div>' : '')
+                + '</div>'
+                + '<div class="ws-meta">'+ws.complete+'/'+ws.total+'</div>'
+                + '<div class="ws-pct">'+cp+'%</div>'
+                + '</div>';
+            }).join('');
 
-            // Completed this week by person
-            const completedByPerson = Object.entries(teamMap)
-              .filter(([e,c])=>c.completedThisWeek>0)
-              .sort((a,b)=>b[1].completedThisWeek-a[1].completedThisWeek);
+            const dueCards = dueThisWeek.map(t => {
+              const dt = new Date(+t.due_date);
+              const dtDay = new Date(dt); dtDay.setHours(0,0,0,0);
+              const isOver = dtDay.getTime() < todayTs;
+              const isToday = dtDay.getTime() === todayTs;
+              const cls = isOver ? 'overdue' : isToday ? 'today' : '';
+              const tag = isOver
+                ? '<span class="due-tag dt-over">Overdue</span>'
+                : isToday ? '<span class="due-tag dt-today">Today</span>'
+                : '<span class="due-tag dt-soon">This week</span>';
+              const who = (t.assignees||[]).map(a=>pName(a.email||'')).filter(Boolean).slice(0,2).join(', ');
+              return '<div class="due-card '+cls+'">'
+                + '<div class="due-date"><div class="due-day">'+dt.getDate()+'</div>'
+                + '<div class="due-mon">'+dt.toLocaleDateString('en-US',{month:'short'})+'</div></div>'
+                + '<div class="due-body">'
+                + '<div class="due-name">'+esc(t.name)+'</div>'
+                + '<div class="due-meta">'+(who?'<span class="due-who">'+esc(who)+'</span>':'')+tag+'</div>'
+                + '</div></div>';
+            }).join('');
 
-            const TEAM_MAP = {
-              'tshang@optimaed.com':{name:'Tina Shang',initials:'TS'},
-              'vjordan@optimaed.com':{name:'Vince Jordan',initials:'VJ'},
-              'doverby@optimaed.com':{name:'Dylan Overby',initials:'DO'},
-              'jstiles@optimaed.com':{name:'Jay Stiles',initials:'JS'},
-              'hmangrum@optimaed.com':{name:'Heather Mangrum',initials:'HM'},
-              'rbezzina@optimaed.com':{name:'Rachel Bezzina',initials:'RB'},
-              'scozart@optimaed.com':{name:'Sydney Carter',initials:'SC'},
-              'gwarren@optimaed.com':{name:'Gabe Warren',initials:'GW'},
-              'jolson@optimaed.com':{name:'Jonathan Olson',initials:'JO'},
-              'rwalker@optimaed.com':{name:'Ryan Walker',initials:'RW'},
-              'sdevereaux@optimaed.com':{name:'Sarah Devereaux',initials:'SD'},
-              'jbergel@optimaed.com':{name:'Jessica Bergel',initials:'JB'},
-              'hduley@optimaed.com':{name:'Heather Duley',initials:'HD'},
-            };
+            const blkRows = blockedTasks.length === 0
+              ? '<div class="empty">No blocked tasks</div>'
+              : blockedTasks.map(t => {
+                  const who = (t.assignees||[]).map(a=>pName(a.email||'')).filter(Boolean).slice(0,2).join(', ');
+                  return '<div class="blk-item">'
+                    + '<div class="blk-dot"></div>'
+                    + '<div><div class="blk-name">'+esc(t.name)+'</div>'
+                    + (who ? '<div class="blk-who">'+esc(who)+'</div>' : '')
+                    + '</div></div>';
+                }).join('');
 
-            function personName(email){ return (TEAM_MAP[email]||{name:email}).name.split(' ')[0]; }
-            function personInitials(email){ return (TEAM_MAP[email]||{initials:'?'}).initials; }
-            function avatarColor(initials){
-              const colors=['#3A9CE4','#27B97C','#D4A847','#DC4E4E','#8B70E6','#2ABCB0','#F0A040','#E05C9A','#6647f0','#30a46c','#ab4aba','#3e63dd','#0091ff'];
-              let h=0; for(const c of initials) h=(h*31+c.charCodeAt(0))%colors.length;
-              return colors[Math.abs(h)%colors.length];
-            }
-            function wsColor(name){
-              const map={'ENGAGE Documentation':'#3e85c7','Asset Migration':'#D4A847','Project Oversight':'#0091ff','Sprint 0 Audit':'#6647f0',' Sprint 0 Audit':'#6647f0','AI Avatars':'#2ABCB0','Platform Integration':'#FF4081','K-12 Account Model':'#8dcec3','Forms System':'#7C4DFF','Canvas LTI':'#b6b6ff','COPPA/FERPA':'#96c7f2','Education Environments':'#E09828','Experience & ILE':'#ffaa7d','Web Companion':'#3e63dd','Media Library':'#ab4aba','Analytics Layer':'#30a46c','Training':'#27B97C','QA & Deployment':'#F0C96A'};
-              return map[name.trim()]||'#5A7A9A';
-            }
+            const msRows = milestones.length === 0
+              ? '<div class="empty">No milestones found</div>'
+              : milestones.map(t => {
+                  const d2 = isDone(t);
+                  const dt = +t.due_date||0;
+                  const tDt = new Date(dt); tDt.setHours(0,0,0,0);
+                  const over = !d2 && dt > 0 && tDt.getTime() < todayTs;
+                  const cls = d2 ? 'done' : over ? 'over' : '';
+                  const icon = d2 ? '✓' : over ? '⚠' : '◇';
+                  const badge = d2
+                    ? '<span class="ms-badge mb-done">Done</span>'
+                    : over ? '<span class="ms-badge mb-over">Overdue</span>'
+                    : '<span class="ms-badge mb-up">Upcoming</span>';
+                  return '<div class="ms-item '+cls+'">'
+                    + '<div class="ms-icon">'+icon+'</div>'
+                    + '<div class="ms-name'+(d2?' done':'')+'">'+esc(t.name)+'</div>'
+                    + (dt ? '<div class="ms-date">'+fmtDate(dt)+'</div>' : '')
+                    + badge+'</div>';
+                }).join('');
 
-            // Max workstream tasks for bar chart scaling
-            const maxWsTasks = Math.max(...workstreams.map(w=>w.total), 1);
+            const actRows = todayActivity.length === 0
+              ? '<div class="empty">No activity today</div>'
+              : todayActivity.map(t => {
+                  const s2 = ss(t), d2 = isDone(t);
+                  const who = (t.assignees||[]).map(a=>pName(a.email||'')).filter(Boolean).slice(0,2).join(', ');
+                  const cls = d2 ? 'closed' : s2==='in progress' ? 'progress' : '';
+                  const badge = d2 ? '<span class="act-status as-closed">Closed</span>'
+                    : s2==='in progress' ? '<span class="act-status as-prog">Active</span>' : '';
+                  return '<div class="act-item '+cls+'">'
+                    + '<div class="act-name">'+esc(t.name)+'</div>'
+                    + '<div class="act-meta">'+(who?'<div class="act-who">'+esc(who)+'</div>':'')+badge+'</div>'
+                    + '</div>';
+                }).join('');
 
-            return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Project F.I.N.E. — Leadership Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#0A0F14;
-  --s1:#111820;
-  --s2:#161E28;
-  --border:rgba(255,255,255,0.06);
-  --gold:#C9A84C;
-  --cream:#EDE8DD;
-  --muted:rgba(237,232,221,0.4);
-  --green:#2DBD85;
-  --blue:#3B9FE8;
-  --amber:#E09828;
-  --red:#E04E4E;
-  --purple:#8B72E6;
-}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--cream);min-height:100vh;
-  background-image:radial-gradient(ellipse 80% 30% at 50% -5%,rgba(201,168,76,0.05),transparent);}
+            const workedRows = workedThisWeek.slice(0,8).map(([email,c]) => {
+              const ini = pInitials(email);
+              const col = avColor(ini);
+              return '<div class="p-row">'
+                + '<div class="p-av" style="background:'+col+'20;color:'+col+'">'+ini+'</div>'
+                + '<div class="p-name">'+esc(pName(email))+'</div>'
+                + '<div class="p-count-sm">'+c.workedOn+' tasks</div>'
+                + '</div>';
+            }).join('') || '<div class="empty">No activity this week</div>';
 
-/* HEADER */
-.header{border-bottom:1px solid var(--border);padding:0 36px;height:52px;
-  display:flex;align-items:center;justify-content:space-between;
-  background:rgba(10,15,20,0.9);backdrop-filter:blur(12px);
-  position:sticky;top:0;z-index:100;}
-.h-brand{font-family:'Instrument Serif',serif;font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold);}
-.h-div{width:1px;height:14px;background:rgba(201,168,76,0.18);margin:0 14px;}
-.h-title{font-size:12px;color:rgba(237,232,221,0.5);font-weight:500;letter-spacing:0.03em;}
-.h-right{display:flex;align-items:center;gap:10px;}
-.h-ts{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(237,232,221,0.25);}
+            const completedRows = completedByPerson.slice(0,8).map(([email,c]) => {
+              const ini = pInitials(email);
+              const col = avColor(ini);
+              return '<div class="p-row">'
+                + '<div class="p-av" style="background:'+col+'20;color:'+col+'">'+ini+'</div>'
+                + '<div class="p-name">'+esc(pName(email))+'</div>'
+                + '<div class="p-count-green">'+c.completedThisWeek+'</div>'
+                + '</div>';
+            }).join('') || '<div class="empty">Nothing completed this week yet</div>';
 
-/* MAIN */
-.main{padding:24px 36px;max-width:1440px;margin:0 auto;}
+            const teamRows = TEAM_LIST.map(m => {
+              const c = teamMap[m.email] || {open:0,done:0,blocked:0,overdue:0,dueThisWeek:0,inprogress:0};
+              const col = avColor(m.initials);
+              let hcls='h-idle', htxt='Queued';
+              const hasWork = c.open > 0 || c.done > 0;
+              if (hasWork) {
+                if (c.overdue >= 2 || c.blocked >= 2) { hcls='h-bad'; htxt='Needs attention'; }
+                else if (c.overdue >= 1 || c.blocked >= 1) { hcls='h-warn'; htxt='Monitor'; }
+                else if (c.inprogress > 0) { hcls='h-good'; htxt='Moving'; }
+                else if (c.done > 0 && c.open === 0) { hcls='h-good'; htxt='Up to date'; }
+              }
+              return '<tr>'
+                + '<td><div class="t-person">'
+                + '<div class="t-av" style="background:'+col+'20;color:'+col+'">'+m.initials+'</div>'
+                + '<div><div class="t-name">'+m.name+'</div><div class="t-role">'+m.role+'</div></div>'
+                + '</div></td>'
+                + '<td style="text-align:center"><span class="health '+hcls+'">'+htxt+'</span></td>'
+                + numCell(c.overdue,'#E04E4E')
+                + numCell(c.blocked,'#E09828')
+                + numCell(c.dueThisWeek,'#EDE8DD')
+                + numCell(c.inprogress,'#3B9FE8')
+                + numCell(c.done,'#27B97C')
+                + '</tr>';
+            }).join('');
 
-/* GRID HELPERS */
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
-.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
-.mb16{margin-bottom:16px;}
+            return '<!DOCTYPE html>\n<html lang="en">\n<head>\n'
+              + '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
+              + '<title>Project F.I.N.E. Leadership Dashboard</title>\n'
+              + '<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">\n'
+              + '<style>\n'
+              + buildCSS()
+              + '</style>\n</head>\n<body>\n'
+              + buildBody({
+                  fetchedAt, daysToRetreat, completePct, total, complete,
+                  inprogress, notstarted, atrisk, blocked, overdue,
+                  wsRows, dueCards, blkRows, msRows, actRows,
+                  workedRows, completedRows, teamRows,
+                  wsCount: workstreams.length,
+                  msCount: milestones.length,
+                  blkCount: blockedTasks.length,
+                  dueCount: dueThisWeek.length
+                })
+              + '\n</body>\n</html>';
+          }
 
-/* PANEL */
-.panel{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:20px 22px;}
-.panel-title{font-size:13px;font-weight:600;letter-spacing:0.04em;color:var(--cream);margin-bottom:16px;}
-.panel-sub{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:16px;}
+          function buildCSS() {
+            return ':root{--bg:#0A0F14;--s1:#111820;--s2:#161E28;--border:rgba(255,255,255,0.06);'
+              + '--gold:#C9A84C;--cream:#EDE8DD;--muted:rgba(237,232,221,0.4);'
+              + '--green:#2DBD85;--blue:#3B9FE8;--amber:#E09828;--red:#E04E4E;--purple:#8B72E6;}\n'
+              + '*{margin:0;padding:0;box-sizing:border-box;}\n'
+              + 'body{font-family:Syne,sans-serif;background:var(--bg);color:var(--cream);'
+              + 'background-image:radial-gradient(ellipse 80% 30% at 50% -5%,rgba(201,168,76,0.05),transparent);}\n'
+              + '.header{border-bottom:1px solid var(--border);padding:0 32px;height:50px;'
+              + 'display:flex;align-items:center;justify-content:space-between;'
+              + 'background:rgba(10,15,20,0.9);backdrop-filter:blur(12px);'
+              + 'position:sticky;top:0;z-index:100;}\n'
+              + '.h-brand{font-family:"Instrument Serif",serif;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold);}\n'
+              + '.h-div{width:1px;height:14px;background:rgba(201,168,76,0.18);margin:0 12px;}\n'
+              + '.h-title{font-size:12px;color:rgba(237,232,221,0.5);font-weight:500;}\n'
+              + '.h-ts{font-family:"JetBrains Mono",monospace;font-size:10px;color:rgba(237,232,221,0.25);}\n'
+              + '.main{padding:22px 32px;max-width:1440px;margin:0 auto;}\n'
+              + '.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}\n'
+              + '.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}\n'
+              + '.mb14{margin-bottom:14px;}\n'
+              + '.panel{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:18px 20px;}\n'
+              + '.panel-title{font-size:12px;font-weight:700;letter-spacing:0.04em;color:var(--cream);margin-bottom:14px;}\n'
+              + '.top-row{display:grid;grid-template-columns:1fr auto;gap:14px;margin-bottom:14px;align-items:stretch;}\n'
+              + '.top-left{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}\n'
+              + '.stat{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;}\n'
+              + '.stat::after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--c);}\n'
+              + '.sn{font-family:"Instrument Serif",serif;font-size:44px;color:var(--cream);line-height:1;margin-bottom:4px;}\n'
+              + '.sl{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:600;}\n'
+              + '.countdown{background:var(--s1);border:1px solid var(--border);border-radius:12px;'
+              + 'padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;'
+              + 'text-align:center;gap:3px;min-width:150px;'
+              + 'background-image:radial-gradient(ellipse at 50% 0%,rgba(201,168,76,0.06),transparent 65%);}\n'
+              + '.cd-e{font-size:20px;}\n'
+              + '.cd-n{font-family:"Instrument Serif",serif;font-size:58px;color:var(--gold);line-height:1;}\n'
+              + '.cd-u{font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);}\n'
+              + '.cd-l{font-size:11px;color:var(--cream);font-weight:600;margin-top:2px;}\n'
+              + '.cd-d{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);}\n'
+              + '.prog-bg{height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;margin:10px 0 8px;}\n'
+              + '.prog-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold),var(--green));}\n'
+              + '.legend{display:flex;gap:14px;flex-wrap:wrap;}\n'
+              + '.li{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);}\n'
+              + '.ld{width:6px;height:6px;border-radius:50%;flex-shrink:0;}\n'
+              + '.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}\n'
+              + '.st{font-family:"Instrument Serif",serif;font-size:16px;color:var(--cream);}\n'
+              + '.sb{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);'
+              + 'background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.12);padding:3px 9px;border-radius:20px;}\n'
+              + '.ws-chart{display:flex;flex-direction:column;gap:8px;}\n'
+              + '.ws-row{display:flex;align-items:center;gap:10px;}\n'
+              + '.ws-name{font-size:11px;font-weight:600;color:var(--cream);flex:0 0 155px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n'
+              + '.ws-bar-wrap{flex:1;height:20px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden;}\n'
+              + '.ws-seg{height:100%;float:left;}\n'
+              + '.ws-meta{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);flex:0 0 42px;text-align:right;}\n'
+              + '.ws-pct{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--gold);flex:0 0 30px;text-align:right;}\n'
+              + '.ws-legend{display:flex;gap:14px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}\n'
+              + '.team-table{width:100%;border-collapse:collapse;}\n'
+              + '.team-table th{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:0 8px 10px;text-align:center;}\n'
+              + '.team-table th:first-child{text-align:left;}\n'
+              + '.team-table td{padding:8px;border-top:1px solid rgba(255,255,255,0.03);vertical-align:middle;}\n'
+              + '.team-table tr:first-child td{border-top:none;}\n'
+              + '.team-table tr:hover td{background:rgba(255,255,255,0.02);}\n'
+              + '.t-person{display:flex;align-items:center;gap:8px;}\n'
+              + '.t-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:"Instrument Serif",serif;font-size:10px;font-weight:600;flex-shrink:0;}\n'
+              + '.t-name{font-size:12px;font-weight:600;color:var(--cream);}\n'
+              + '.t-role{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);}\n'
+              + '.tc{text-align:center;font-family:"Instrument Serif",serif;font-size:18px;}\n'
+              + '.tc-zero{text-align:center;font-size:12px;color:rgba(237,232,221,0.15);}\n'
+              + '.health{display:inline-flex;align-items:center;padding:2px 7px;border-radius:12px;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap;}\n'
+              + '.h-good{background:rgba(45,189,133,0.12);color:var(--green);border:1px solid rgba(45,189,133,0.2);}\n'
+              + '.h-warn{background:rgba(224,152,40,0.12);color:var(--amber);border:1px solid rgba(224,152,40,0.2);}\n'
+              + '.h-bad{background:rgba(224,78,78,0.12);color:var(--red);border:1px solid rgba(224,78,78,0.2);}\n'
+              + '.h-idle{background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid rgba(255,255,255,0.07);}\n'
+              + '.person-list{display:flex;flex-direction:column;gap:7px;}\n'
+              + '.p-row{display:flex;align-items:center;gap:9px;padding:7px 10px;background:rgba(255,255,255,0.02);border-radius:7px;}\n'
+              + '.p-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:"Instrument Serif",serif;font-size:10px;font-weight:600;flex-shrink:0;}\n'
+              + '.p-name{flex:1;font-size:12px;font-weight:600;color:var(--cream);}\n'
+              + '.p-count-sm{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);}\n'
+              + '.p-count-green{font-family:"Instrument Serif",serif;font-size:20px;color:var(--green);}\n'
+              + '.act-list{display:flex;flex-direction:column;gap:5px;}\n'
+              + '.act-item{padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:7px;border-left:2px solid var(--border);}\n'
+              + '.act-item.closed{border-left-color:var(--green);}\n'
+              + '.act-item.progress{border-left-color:var(--blue);}\n'
+              + '.act-name{font-size:11px;font-weight:600;color:var(--cream);margin-bottom:2px;line-height:1.4;}\n'
+              + '.act-meta{display:flex;align-items:center;gap:7px;}\n'
+              + '.act-who{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);}\n'
+              + '.act-status{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;}\n'
+              + '.as-closed{background:rgba(45,189,133,0.15);color:var(--green);}\n'
+              + '.as-prog{background:rgba(59,159,232,0.15);color:var(--blue);}\n'
+              + '.due-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:7px;}\n'
+              + '.due-card{display:flex;align-items:flex-start;gap:9px;padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:8px;}\n'
+              + '.due-card.overdue{background:rgba(224,78,78,0.05);border-color:rgba(224,78,78,0.15);}\n'
+              + '.due-card.today{background:rgba(224,152,40,0.05);border-color:rgba(224,152,40,0.12);}\n'
+              + '.due-date{flex-shrink:0;text-align:center;width:34px;}\n'
+              + '.due-day{font-family:"Instrument Serif",serif;font-size:19px;color:var(--cream);line-height:1;}\n'
+              + '.due-mon{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;}\n'
+              + '.due-card.overdue .due-day{color:var(--red);}\n'
+              + '.due-card.today .due-day{color:var(--amber);}\n'
+              + '.due-body{flex:1;min-width:0;}\n'
+              + '.due-name{font-size:11px;font-weight:600;color:var(--cream);line-height:1.4;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n'
+              + '.due-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}\n'
+              + '.due-who{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);}\n'
+              + '.due-tag{font-size:9px;padding:1px 5px;border-radius:3px;font-family:"JetBrains Mono",monospace;font-weight:600;}\n'
+              + '.dt-over{background:rgba(224,78,78,0.12);color:var(--red);}\n'
+              + '.dt-today{background:rgba(224,152,40,0.12);color:var(--amber);}\n'
+              + '.dt-soon{background:rgba(59,159,232,0.1);color:var(--blue);}\n'
+              + '.blk-item{display:flex;align-items:flex-start;gap:9px;padding:9px 12px;background:rgba(224,78,78,0.05);border:1px solid rgba(224,78,78,0.12);border-radius:7px;margin-bottom:7px;}\n'
+              + '.blk-dot{width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:4px;}\n'
+              + '.blk-name{font-size:12px;font-weight:600;color:var(--cream);line-height:1.4;}\n'
+              + '.blk-who{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);}\n'
+              + '.ms-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:7px;margin-bottom:7px;}\n'
+              + '.ms-item.done{background:rgba(45,189,133,0.04);border-color:rgba(45,189,133,0.12);}\n'
+              + '.ms-item.over{background:rgba(224,78,78,0.04);border-color:rgba(224,78,78,0.12);}\n'
+              + '.ms-icon{font-size:11px;flex-shrink:0;}\n'
+              + '.ms-name{flex:1;font-size:12px;font-weight:600;color:var(--cream);line-height:1.4;}\n'
+              + '.ms-name.done{color:var(--muted);text-decoration:line-through;}\n'
+              + '.ms-date{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);flex-shrink:0;}\n'
+              + '.ms-badge{font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;flex-shrink:0;}\n'
+              + '.mb-done{background:rgba(45,189,133,0.14);color:var(--green);}\n'
+              + '.mb-up{background:rgba(201,168,76,0.1);color:var(--gold);}\n'
+              + '.mb-over{background:rgba(224,78,78,0.14);color:var(--red);}\n'
+              + '.empty{text-align:center;padding:22px;color:rgba(237,232,221,0.18);font-size:11px;}\n'
+              + '.ov-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center;}\n'
+              + '.ov-num{font-family:"Instrument Serif",serif;font-size:34px;line-height:1;}\n'
+              + '.ov-lbl{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-top:3px;}\n';
+          }
 
-/* TOP ROW */
-.top-row{display:grid;grid-template-columns:1fr auto;gap:16px;margin-bottom:16px;align-items:stretch;}
-.top-left{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+          function buildBody(d) {
+            const {fetchedAt,daysToRetreat,completePct,total,complete,inprogress,
+                   notstarted,atrisk,blocked,overdue,wsRows,dueCards,blkRows,
+                   msRows,actRows,workedRows,completedRows,teamRows,
+                   wsCount,msCount,blkCount,dueCount} = d;
 
-/* STAT CARDS */
-.stat{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;}
-.stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--c);}
-.stat-num{font-family:'Instrument Serif',serif;font-size:46px;color:var(--cream);line-height:1;margin-bottom:4px;}
-.stat-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+            return '<div class="header">'
+              + '<div style="display:flex;align-items:center">'
+              + '<div class="h-brand">Optima ED</div><div class="h-div"></div>'
+              + '<div class="h-title">Project F.I.N.E. &mdash; Leadership Dashboard</div>'
+              + '</div>'
+              + '<div class="h-ts">Data as of '+fetchedAt+'</div>'
+              + '</div>\n'
+              + '<div class="main">\n'
 
-/* COUNTDOWN */
-.countdown{background:var(--s1);border:1px solid var(--border);border-radius:12px;
-  padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;gap:4px;position:relative;overflow:hidden;min-width:160px;}
-.countdown::before{content:'';position:absolute;inset:0;border-radius:12px;
-  background:radial-gradient(ellipse at 50% 0%,rgba(201,168,76,0.06),transparent 65%);pointer-events:none;}
-.cd-emoji{font-size:20px;}
-.cd-num{font-family:'Instrument Serif',serif;font-size:60px;color:var(--gold);line-height:1;}
-.cd-unit{font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);}
-.cd-label{font-size:11px;color:var(--cream);font-weight:600;margin-top:2px;}
-.cd-date{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);}
+              // TOP ROW
+              + '<div class="top-row">\n'
+              + '<div class="top-left">'
+              + '<div class="stat" style="--c:#27B97C"><div class="sn">'+complete+'</div><div class="sl">Complete</div></div>'
+              + '<div class="stat" style="--c:#3B9FE8"><div class="sn">'+inprogress+'</div><div class="sl">In Progress</div></div>'
+              + '<div class="stat" style="--c:#C9A84C"><div class="sn">'+total+'</div><div class="sl">Total Tasks</div></div>'
+              + '</div>'
+              + '<div class="countdown"><div class="cd-e">&#127891;</div>'
+              + '<div class="cd-n">'+daysToRetreat+'</div>'
+              + '<div class="cd-u">days to retreat</div>'
+              + '<div class="cd-l">Teacher Training</div>'
+              + '<div class="cd-d">July 28&ndash;31, 2026</div></div>'
+              + '</div>\n'
 
-/* PROGRESS BAR */
-.prog-bar-bg{height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;margin:12px 0 8px;}
-.prog-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold),var(--green));}
-.prog-legend{display:flex;gap:16px;}
-.pl-item{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);}
-.pl-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+              // PROGRESS + OVERVIEW
+              + '<div class="g2 mb14">'
+              + '<div class="panel"><div class="panel-title">Overall Progress Towards Completion</div>'
+              + '<div class="prog-bg"><div class="prog-fill" style="width:'+completePct+'%"></div></div>'
+              + '<div style="display:flex;justify-content:space-between;margin-bottom:10px;">'
+              + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--gold);">'+completePct+'% complete</span>'
+              + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--muted);">'+complete+' of '+total+' tasks</span>'
+              + '</div>'
+              + '<div class="legend">'
+              + '<div class="li"><div class="ld" style="background:var(--green)"></div>'+complete+' closed</div>'
+              + '<div class="li"><div class="ld" style="background:var(--blue)"></div>'+inprogress+' in progress</div>'
+              + '<div class="li"><div class="ld" style="background:var(--amber)"></div>'+atrisk+' at risk</div>'
+              + '<div class="li"><div class="ld" style="background:var(--red)"></div>'+blocked+' blocked</div>'
+              + '<div class="li"><div class="ld" style="background:rgba(237,232,221,0.15)"></div>'+notstarted+' not started</div>'
+              + '</div></div>'
+              + '<div class="panel"><div class="panel-title">Key Metrics</div>'
+              + '<div class="ov-grid">'
+              + '<div><div class="ov-num" style="color:var(--red)">'+overdue+'</div><div class="ov-lbl">Overdue</div></div>'
+              + '<div><div class="ov-num" style="color:var(--red)">'+blocked+'</div><div class="ov-lbl">Blocked</div></div>'
+              + '<div><div class="ov-num" style="color:var(--blue)">'+dueCount+'</div><div class="ov-lbl">Due This Week</div></div>'
+              + '</div></div>'
+              + '</div>\n'
 
-/* WORKSTREAM CHART */
-.ws-chart{display:flex;flex-direction:column;gap:10px;}
-.ws-row{display:flex;align-items:center;gap:12px;}
-.ws-name{font-size:11px;font-weight:600;color:var(--cream);flex:0 0 160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ws-bar-wrap{flex:1;height:22px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden;position:relative;}
-.ws-bar-seg{height:100%;float:left;transition:none;}
-.ws-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);flex:0 0 40px;text-align:right;}
-.ws-pct{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold);flex:0 0 32px;text-align:right;}
+              // WORKSTREAMS
+              + '<div class="panel mb14">'
+              + '<div class="sh"><div class="st">Workstream Progress</div><div class="sb">'+wsCount+' active workstreams</div></div>'
+              + '<div class="ws-chart">'+wsRows+'</div>'
+              + '<div class="ws-legend">'
+              + '<div class="li"><div class="ld" style="background:#27B97C"></div>Closed</div>'
+              + '<div class="li"><div class="ld" style="background:#3B9FE8"></div>In Progress</div>'
+              + '<div class="li"><div class="ld" style="background:#E09828"></div>At Risk</div>'
+              + '<div class="li"><div class="ld" style="background:#E04E4E"></div>Blocked</div>'
+              + '<div class="li"><div class="ld" style="background:rgba(255,255,255,0.15)"></div>Not Started</div>'
+              + '</div></div>\n'
 
-/* TEAM TABLE */
-.team-table{width:100%;border-collapse:collapse;}
-.team-table th{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);
-  font-weight:600;padding:0 10px 10px;text-align:center;}
-.team-table th:first-child{text-align:left;}
-.team-table td{padding:8px 10px;border-top:1px solid rgba(255,255,255,0.03);vertical-align:middle;}
-.team-table tr:first-child td{border-top:none;}
-.team-table tr:hover td{background:rgba(255,255,255,0.02);}
-.t-person{display:flex;align-items:center;gap:9px;}
-.t-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-family:'Instrument Serif',serif;font-size:10px;font-weight:600;flex-shrink:0;}
-.t-name{font-size:12px;font-weight:600;color:var(--cream);}
-.t-role{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);}
-.t-num{font-family:'Instrument Serif',serif;font-size:18px;text-align:center;color:var(--cream);}
-.t-zero{font-size:12px;text-align:center;color:rgba(237,232,221,0.15);}
-.health{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;
-  font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap;}
-.h-good{background:rgba(45,189,133,0.12);color:var(--green);border:1px solid rgba(45,189,133,0.2);}
-.h-warn{background:rgba(224,152,40,0.12);color:var(--amber);border:1px solid rgba(224,152,40,0.2);}
-.h-bad{background:rgba(224,78,78,0.12);color:var(--red);border:1px solid rgba(224,78,78,0.2);}
-.h-idle{background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid rgba(255,255,255,0.07);}
+              // WORKED / COMPLETED / ACTIVITY
+              + '<div class="g3">'
+              + '<div class="panel"><div class="panel-title">Worked On This Week</div>'
+              + '<div class="person-list">'+workedRows+'</div></div>'
+              + '<div class="panel"><div class="panel-title">Completed This Week</div>'
+              + '<div class="person-list">'+completedRows+'</div></div>'
+              + '<div class="panel"><div class="panel-title">Latest Activity</div>'
+              + '<div class="act-list">'+actRows+'</div></div>'
+              + '</div>\n'
 
-/* COMPLETED / WORKED THIS WEEK */
-.person-list{display:flex;flex-direction:column;gap:8px;}
-.p-row{display:flex;align-items:center;gap:10px;padding:8px 12px;
-  background:rgba(255,255,255,0.02);border-radius:8px;}
-.p-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-family:'Instrument Serif',serif;font-size:11px;font-weight:600;flex-shrink:0;}
-.p-name{flex:1;font-size:12px;font-weight:600;color:var(--cream);}
-.p-count{font-family:'Instrument Serif',serif;font-size:20px;color:var(--green);}
-.p-count-b{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+              // BLOCKED + MILESTONES
+              + '<div class="g2">'
+              + '<div class="panel"><div class="sh"><div class="st">Blocked Tasks</div><div class="sb">'+blkCount+' blocked</div></div>'+blkRows+'</div>'
+              + '<div class="panel"><div class="sh"><div class="st">Milestones &amp; Gates</div><div class="sb">'+msCount+' gates</div></div>'+msRows+'</div>'
+              + '</div>\n'
 
-/* ACTIVITY */
-.act-list{display:flex;flex-direction:column;gap:6px;}
-.act-item{padding:10px 12px;background:rgba(255,255,255,0.02);border-radius:8px;
-  border-left:2px solid var(--border);}
-.act-item.closed{border-left-color:var(--green);}
-.act-item.progress{border-left-color:var(--blue);}
-.act-name{font-size:11px;font-weight:600;color:var(--cream);margin-bottom:2px;line-height:1.4;}
-.act-meta{display:flex;align-items:center;gap:8px;}
-.act-who{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);}
-.act-time{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(237,232,221,0.2);}
-.act-status{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;}
-.as-closed{background:rgba(45,189,133,0.15);color:var(--green);}
-.as-prog{background:rgba(59,159,232,0.15);color:var(--blue);}
+              // DUE THIS WEEK
+              + '<div class="panel mb14">'
+              + '<div class="sh"><div class="st">Tasks Due This Week</div><div class="sb">'+dueCount+' tasks</div></div>'
+              + '<div class="due-grid">'+dueCards+'</div>'
+              + '</div>\n'
 
-/* DUE THIS WEEK */
-.due-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;}
-.due-card{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;
-  background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:9px;}
-.due-card.overdue{background:rgba(224,78,78,0.05);border-color:rgba(224,78,78,0.15);}
-.due-card.today{background:rgba(224,152,40,0.05);border-color:rgba(224,152,40,0.12);}
-.due-date{flex-shrink:0;text-align:center;width:36px;}
-.due-day{font-family:'Instrument Serif',serif;font-size:20px;color:var(--cream);line-height:1;}
-.due-mon{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;}
-.due-card.overdue .due-day{color:var(--red);}
-.due-card.today .due-day{color:var(--amber);}
-.due-body{flex:1;min-width:0;}
-.due-name{font-size:11px;font-weight:600;color:var(--cream);line-height:1.4;margin-bottom:3px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.due-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.due-who{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);}
-.due-tag{font-size:9px;padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-weight:600;}
-.dt-over{background:rgba(224,78,78,0.12);color:var(--red);}
-.dt-today{background:rgba(224,152,40,0.12);color:var(--amber);}
-.dt-soon{background:rgba(59,159,232,0.1);color:var(--blue);}
+              // TEAM HEALTH
+              + '<div class="panel mb14">'
+              + '<div class="sh"><div class="st">Team Health</div><div class="sb">13 Members</div></div>'
+              + '<table class="team-table"><thead><tr>'
+              + '<th>Team Member</th><th>Health</th><th>Overdue</th><th>Blocked</th>'
+              + '<th>Due This Week</th><th>In Progress</th><th>Complete</th>'
+              + '</tr></thead><tbody>'+teamRows+'</tbody></table>'
+              + '</div>\n'
 
-/* BLOCKED */
-.blk-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;
-  background:rgba(224,78,78,0.05);border:1px solid rgba(224,78,78,0.12);
-  border-radius:8px;margin-bottom:8px;}
-.blk-dot{width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:4px;}
-.blk-name{flex:1;font-size:12px;font-weight:600;color:var(--cream);line-height:1.4;}
-.blk-who{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
-
-/* MILESTONES */
-.ms-item{display:flex;align-items:center;gap:12px;padding:10px 14px;
-  background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);
-  border-radius:8px;margin-bottom:8px;}
-.ms-item.done{background:rgba(45,189,133,0.04);border-color:rgba(45,189,133,0.12);}
-.ms-item.over{background:rgba(224,78,78,0.04);border-color:rgba(224,78,78,0.12);}
-.ms-icon{font-size:12px;flex-shrink:0;}
-.ms-name{flex:1;font-size:12px;font-weight:600;color:var(--cream);line-height:1.4;}
-.ms-name.done{color:var(--muted);text-decoration:line-through;}
-.ms-date{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);flex-shrink:0;}
-.ms-badge{font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
-  padding:2px 7px;border-radius:4px;flex-shrink:0;}
-.mb-done{background:rgba(45,189,133,0.14);color:var(--green);}
-.mb-up{background:rgba(201,168,76,0.1);color:var(--gold);}
-.mb-over{background:rgba(224,78,78,0.14);color:var(--red);}
-
-.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
-.section-title{font-family:'Instrument Serif',serif;font-size:17px;color:var(--cream);}
-.section-badge{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);
-  background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.12);padding:3px 10px;border-radius:20px;}
-
-.empty{text-align:center;padding:24px;color:rgba(237,232,221,0.18);font-size:11px;}
-</style>
-</head>
-<body>
-
-<div class="header">
-  <div style="display:flex;align-items:center;">
-    <div class="h-brand">Optima ED</div>
-    <div class="h-div"></div>
-    <div class="h-title">Project F.I.N.E. — Leadership Dashboard</div>
-  </div>
-  <div class="h-right">
-    <div class="h-ts">Data as of ${fetchedAt}</div>
-  </div>
-</div>
-
-<div class="main">
-
-<!-- TOP: STATS + COUNTDOWN -->
-<div class="top-row">
-  <div class="top-left">
-    <div class="stat" style="--c:#27B97C">
-      <div class="stat-num">${complete}</div>
-      <div class="stat-label">Complete</div>
-    </div>
-    <div class="stat" style="--c:#3B9FE8">
-      <div class="stat-num">${inprogress}</div>
-      <div class="stat-label">In Progress</div>
-    </div>
-    <div class="stat" style="--c:#C9A84C">
-      <div class="stat-num">${total}</div>
-      <div class="stat-label">Total Tasks</div>
-    </div>
-  </div>
-  <div class="countdown">
-    <div class="cd-emoji">🎓</div>
-    <div class="cd-num">${daysToRetreat}</div>
-    <div class="cd-unit">days to retreat</div>
-    <div class="cd-label">Teacher Training</div>
-    <div class="cd-date">July 28–31, 2026</div>
-  </div>
-</div>
-
-<!-- PROGRESS + ADDITIONAL STATS -->
-<div class="g2 mb16">
-  <div class="panel">
-    <div class="panel-title">Overall Progress Towards Completion</div>
-    <div class="prog-bar-bg">
-      <div class="prog-bar-fill" style="width:${completePct}%"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);">${completePct}% complete</span>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);">${complete} of ${total} tasks</span>
-    </div>
-    <div class="prog-legend">
-      <div class="pl-item"><div class="pl-dot" style="background:var(--green)"></div>${complete} closed</div>
-      <div class="pl-item"><div class="pl-dot" style="background:var(--blue)"></div>${inprogress} in progress</div>
-      <div class="pl-item"><div class="pl-dot" style="background:var(--amber)"></div>${atrisk} at risk</div>
-      <div class="pl-item"><div class="pl-dot" style="background:var(--red)"></div>${blocked} blocked</div>
-      <div class="pl-item"><div class="pl-dot" style="background:rgba(237,232,221,0.15)"></div>${notstarted} not started</div>
-    </div>
-  </div>
-  <div class="panel">
-    <div class="panel-title">Task Overview</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center;">
-      <div>
-        <div style="font-family:'Instrument Serif',serif;font-size:36px;color:var(--red);">${overdue}</div>
-        <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);">Overdue</div>
-      </div>
-      <div>
-        <div style="font-family:'Instrument Serif',serif;font-size:36px;color:var(--red);">${blocked}</div>
-        <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);">Blocked</div>
-      </div>
-      <div>
-        <div style="font-family:'Instrument Serif',serif;font-size:36px;color:var(--blue);">${dueThisWeek.length}</div>
-        <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);">Due This Week</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- WORKSTREAM PROGRESS -->
-<div class="panel mb16">
-  <div class="section-hdr">
-    <div class="section-title">Workstream Progress</div>
-    <div class="section-badge">${workstreams.length} active workstreams</div>
-  </div>
-  <div class="ws-chart">
-    ${workstreams.map(ws => {
-      const cp = pct(ws.complete,ws.total);
-      const ip = pct(ws.inprogress,ws.total);
-      const bp = pct(ws.blocked,ws.total);
-      const ap = pct(ws.atrisk,ws.total);
-      const np = 100-cp-ip-bp-ap;
-      const color = wsColor(ws.name);
-      return `<div class="ws-row">
-        <div class="ws-name" title="${ws.name}">${ws.name}</div>
-        <div class="ws-bar-wrap">
-          ${ws.complete>0?`<div class="ws-bar-seg" style="width:${cp}%;background:#27B97C;opacity:0.9"></div>`:''}
-          ${ws.inprogress>0?`<div class="ws-bar-seg" style="width:${ip}%;background:#3B9FE8;opacity:0.9"></div>`:''}
-          ${ws.atrisk>0?`<div class="ws-bar-seg" style="width:${ap}%;background:#E09828;opacity:0.9"></div>`:''}
-          ${ws.blocked>0?`<div class="ws-bar-seg" style="width:${bp}%;background:#E04E4E;opacity:0.9"></div>`:''}
-          ${np>0?`<div class="ws-bar-seg" style="width:${np}%;background:rgba(255,255,255,0.06)"></div>`:''}
-        </div>
-        <div class="ws-count">${ws.complete}/${ws.total}</div>
-        <div class="ws-pct">${cp}%</div>
-      </div>`;
-    }).join('')}
-  </div>
-  <div style="display:flex;gap:16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
-    <div class="pl-item"><div class="pl-dot" style="background:#27B97C"></div>Closed</div>
-    <div class="pl-item"><div class="pl-dot" style="background:#3B9FE8"></div>In Progress</div>
-    <div class="pl-item"><div class="pl-dot" style="background:#E09828"></div>At Risk</div>
-    <div class="pl-item"><div class="pl-dot" style="background:#E04E4E"></div>Blocked</div>
-    <div class="pl-item"><div class="pl-dot" style="background:rgba(255,255,255,0.15)"></div>Not Started</div>
-  </div>
-</div>
-
-<!-- WORKED / COMPLETED / ACTIVITY -->
-<div class="g3">
-  <div class="panel">
-    <div class="panel-title">Worked On This Week</div>
-    <div class="person-list">
-      ${workedThisWeek.slice(0,8).map(([email,c])=>{
-        const ini = personInitials(email);
-        const col = avatarColor(ini);
-        return `<div class="p-row">
-          <div class="p-av" style="background:${col}20;color:${col}">${ini}</div>
-          <div class="p-name">${personName(email)}</div>
-          <div class="p-count-b">${c.workedOn} tasks</div>
-        </div>`;
-      }).join('') || '<div class="empty">No activity this week</div>'}
-    </div>
-  </div>
-  <div class="panel">
-    <div class="panel-title">Completed This Week</div>
-    <div class="person-list">
-      ${completedByPerson.slice(0,8).map(([email,c])=>{
-        const ini = personInitials(email);
-        const col = avatarColor(ini);
-        return `<div class="p-row">
-          <div class="p-av" style="background:${col}20;color:${col}">${ini}</div>
-          <div class="p-name">${personName(email)}</div>
-          <div class="p-count">${c.completedThisWeek}</div>
-        </div>`;
-      }).join('') || '<div class="empty">Nothing completed this week yet</div>'}
-    </div>
-  </div>
-  <div class="panel">
-    <div class="panel-title">Latest Activity</div>
-    <div class="act-list">
-      ${todayActivity.slice(0,8).map(t=>{
-        const s=ss(t);
-        const d=isDone(t);
-        const who=(t.assignees||[]).map(a=>personName(a.email||'')).filter(Boolean).slice(0,2).join(', ');
-        const cls=d?'closed':s==='in progress'?'progress':'';
-        const badge=d?'<span class="act-status as-closed">Closed</span>':s==='in progress'?'<span class="act-status as-prog">Active</span>':'';
-        return `<div class="act-item ${cls}">
-          <div class="act-name">${t.name}</div>
-          <div class="act-meta">
-            ${who?`<div class="act-who">${who}</div>`:''}
-            ${badge}
-            <div class="act-time">${timeAgo(t.date_updated)}</div>
-          </div>
-        </div>`;
-      }).join('') || '<div class="empty">No activity today</div>'}
-    </div>
-  </div>
-</div>
-
-<!-- BLOCKED + MILESTONES -->
-<div class="g2">
-  <div class="panel">
-    <div class="section-hdr">
-      <div class="section-title">Blocked Tasks</div>
-      <div class="section-badge">${blockedTasks.length} blocked</div>
-    </div>
-    ${blockedTasks.length===0
-      ? '<div class="empty">✓ No blocked tasks</div>'
-      : blockedTasks.map(t=>{
-          const who=(t.assignees||[]).map(a=>personName(a.email||'')).filter(Boolean).slice(0,2).join(', ');
-          return `<div class="blk-item">
-            <div class="blk-dot"></div>
-            <div>
-              <div class="blk-name">${t.name}</div>
-              ${who?`<div class="blk-who">${who}</div>`:''}
-            </div>
-          </div>`;
-        }).join('')}
-  </div>
-  <div class="panel">
-    <div class="section-hdr">
-      <div class="section-title">Milestones & Gates</div>
-      <div class="section-badge">${milestones.length} gates</div>
-    </div>
-    ${milestones.map(t=>{
-      const d=isDone(t);
-      const dt=+t.due_date||0;
-      const tDt=new Date(dt); tDt.setHours(0,0,0,0);
-      const over=!d&&dt>0&&tDt.getTime()<todayTs;
-      const cls=d?'done':over?'over':'';
-      const icon=d?'✓':over?'⚠':'◇';
-      const badge=d?'<span class="ms-badge mb-done">Done</span>':over?'<span class="ms-badge mb-over">Overdue</span>':'<span class="ms-badge mb-up">Upcoming</span>';
-      return `<div class="ms-item ${cls}">
-        <div class="ms-icon">${icon}</div>
-        <div class="ms-name ${d?'done':''}">${t.name}</div>
-        ${dt?`<div class="ms-date">${fmtDate(dt)}</div>`:''}
-        ${badge}
-      </div>`;
-    }).join('') || '<div class="empty">No milestones found</div>'}
-  </div>
-</div>
-
-<!-- DUE THIS WEEK -->
-<div class="panel mb16" style="margin-top:16px;">
-  <div class="section-hdr">
-    <div class="section-title">Tasks Due This Week</div>
-    <div class="section-badge">${dueThisWeek.length} tasks</div>
-  </div>
-  <div class="due-grid">
-    ${dueThisWeek.length===0
-      ? '<div class="empty">✓ Nothing due this week</div>'
-      : dueThisWeek.map(t=>{
-          const dt=new Date(+t.due_date);
-          const dtDay=new Date(dt); dtDay.setHours(0,0,0,0);
-          const isOver=dtDay.getTime()<todayTs;
-          const isToday=dtDay.getTime()===todayTs;
-          const cls=isOver?'overdue':isToday?'today':'';
-          const tag=isOver?'<span class="due-tag dt-over">Overdue</span>':isToday?'<span class="due-tag dt-today">Today</span>':'<span class="due-tag dt-soon">This week</span>';
-          const who=(t.assignees||[]).map(a=>personName(a.email||'')).filter(Boolean).slice(0,2).join(', ');
-          return `<div class="due-card ${cls}">
-            <div class="due-date">
-              <div class="due-day">${dt.getDate()}</div>
-              <div class="due-mon">${dt.toLocaleDateString('en-US',{month:'short'})}</div>
-            </div>
-            <div class="due-body">
-              <div class="due-name">${t.name}</div>
-              <div class="due-meta">
-                ${who?`<div class="due-who">${who}</div>`:''}
-                ${tag}
-              </div>
-            </div>
-          </div>`;
-        }).join('')}
-  </div>
-</div>
-
-<!-- TEAM HEALTH -->
-<div class="panel mb16">
-  <div class="section-hdr">
-    <div class="section-title">Team Health</div>
-    <div class="section-badge">13 Members</div>
-  </div>
-  <table class="team-table">
-    <thead>
-      <tr>
-        <th>Team Member</th>
-        <th>Health</th>
-        <th>Overdue</th>
-        <th>Blocked</th>
-        <th>Due This Week</th>
-        <th>In Progress</th>
-        <th>Complete</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${[
-        {email:'tshang@optimaed.com',    name:'Tina Shang',      role:'DET',     initials:'TS'},
-        {email:'vjordan@optimaed.com',   name:'Vince Jordan',    role:'CTO',     initials:'VJ'},
-        {email:'doverby@optimaed.com',   name:'Dylan Overby',    role:'TL/PD',   initials:'DO'},
-        {email:'jstiles@optimaed.com',   name:'Jay Stiles',      role:'AI/FSD',  initials:'JS'},
-        {email:'hmangrum@optimaed.com',  name:'Heather Mangrum', role:'UD',      initials:'HM'},
-        {email:'rbezzina@optimaed.com',  name:'Rachel Bezzina',  role:'Video',   initials:'RB'},
-        {email:'scozart@optimaed.com',   name:'Sydney Carter',   role:'Asset',   initials:'SC'},
-        {email:'gwarren@optimaed.com',   name:'Gabe Warren',     role:'Asset',   initials:'GW'},
-        {email:'jolson@optimaed.com',    name:'Jonathan Olson',  role:'SME Lead',initials:'JO'},
-        {email:'rwalker@optimaed.com',   name:'Ryan Walker',     role:'SME',     initials:'RW'},
-        {email:'sdevereaux@optimaed.com',name:'Sarah Devereaux', role:'SME',     initials:'SD'},
-        {email:'jbergel@optimaed.com',   name:'Jessica Bergel',  role:'SME',     initials:'JB'},
-        {email:'hduley@optimaed.com',    name:'Heather Duley',   role:'SME',     initials:'HD'},
-      ].map(m => {
-        const c = teamMap[m.email]||{open:0,done:0,blocked:0,overdue:0,dueThisWeek:0,inprogress:0};
-        const col = avatarColor(m.initials);
-        let hcls='h-idle',htxt='Queued';
-        const hasWork=c.open>0||c.done>0;
-        if(hasWork){
-          if(c.overdue>=2||c.blocked>=2){hcls='h-bad';htxt='Needs attention';}
-          else if(c.overdue>=1||c.blocked>=1){hcls='h-warn';htxt='Monitor';}
-          else if(c.inprogress>0){hcls='h-good';htxt='Moving';}
-          else if(c.done>0&&c.open===0){hcls='h-good';htxt='Up to date';}
-        }
-        const num=(v,color)=>v>0?`<div class="t-num" style="${color?'color:'+color:''}">${v}</div>`:`<div class="t-zero">—</div>`;
-        return `<tr>
-          <td><div class="t-person">
-            <div class="t-av" style="background:${col}20;color:${col}">${m.initials}</div>
-            <div><div class="t-name">${m.name}</div><div class="t-role">${m.role}</div></div>
-          </div></td>
-          <td style="text-align:center"><span class="health ${hcls}">${htxt}</span></td>
-          <td>${num(c.overdue,'var(--red)')}</td>
-          <td>${num(c.blocked,'var(--amber)')}</td>
-          <td>${num(c.dueThisWeek)}</td>
-          <td>${num(c.inprogress,'var(--blue)')}</td>
-          <td>${num(c.done,'var(--green)')}</td>
-        </tr>`;
-      }).join('')}
-    </tbody>
-  </table>
-</div>
-
-</div><!-- /main -->
-</body>
-</html>`;
+              + '</div>';
           }
 
           main().catch(e => { console.error('FAILED:', e.message); process.exit(1); });
-          SCRIPT
+          JSEOF
+
+      - name: Run build script
+        env:
+          CLICKUP_TOKEN: ${{ secrets.CLICKUP_TOKEN }}
+          SPACE_ID: '901313746539'
+        run: node build.js
 
       - name: Commit and push
         run: |
