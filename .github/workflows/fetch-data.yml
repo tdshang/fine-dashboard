@@ -165,7 +165,7 @@ jobs:
 
             const wsMap={};
             tasks.forEach(t=>{
-              const ws=t._workstream||null;
+              const ws=t._workstream&&typeof t._workstream==='string'?t._workstream.trim():null;
               if(!ws)return;
               if(!wsMap[ws])wsMap[ws]={name:ws,complete:0,inprogress:0,notstarted:0,atrisk:0,blocked:0,total:0};
               const s=ss(t);
@@ -178,7 +178,7 @@ jobs:
             });
 
             const workstreams=Object.values(wsMap).filter(w=>w.total>0).sort((a,b)=>{
-              const ai=WS_ORDER.indexOf(a.name.trim()),bi=WS_ORDER.indexOf(b.name.trim());
+              const ai=WS_ORDER.indexOf((a.name||'').trim()),bi=WS_ORDER.indexOf((b.name||'').trim());
               if(ai===-1&&bi===-1)return a.name.localeCompare(b.name);
               if(ai===-1)return 1;if(bi===-1)return -1;return ai-bi;
             });
@@ -317,7 +317,7 @@ jobs:
               const bp=pct(ws.blocked,ws.total);
               const np=Math.max(0,100-cp-ip-ap-bp);
               return '<div class="ws-row">'
-                +'<div class="ws-name" title="'+esc(ws.name)+'">'+esc(ws.name)+'</div>'
+                +'<div class="ws-name" title="'+esc(ws.name||'')+'">'+esc(ws.name||'')+'</div>'
                 +'<div class="ws-bar-wrap">'
                 +(ws.complete>0?'<div class="ws-seg" style="width:'+cp+'%;background:#6bc97e"></div>':'')
                 +(ws.inprogress>0?'<div class="ws-seg" style="width:'+ip+'%;background:#7c6fcd"></div>':'')
