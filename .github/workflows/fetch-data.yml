@@ -6,13 +6,17 @@ on:
     - cron: '0 12 * * *'
   workflow_dispatch: # allows manual trigger from GitHub Actions tab
 
+# Give the workflow write permission to push data.json back to the repo
+permissions:
+  contents: write
+
 jobs:
   fetch-clickup-data:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Fetch ClickUp data and save to data.json
         env:
@@ -69,7 +73,7 @@ jobs:
 
             for (let i = 0; i < allLists.length; i++) {
               const l = allLists[i];
-              console.log(`Fetching list ${i+1}/${allLists.length}: ${l.name}`);
+              console.log('Fetching list ' + (i+1) + '/' + allLists.length + ': ' + l.name);
               let page = 0;
               while (true) {
                 const { tasks: batch = [] } = await cuGet(
@@ -98,7 +102,7 @@ jobs:
               tasks: tasks
             };
             fs.writeFileSync('data.json', JSON.stringify(output));
-            console.log('data.json written successfully with', tasks.length, 'tasks');
+            console.log('data.json written with', tasks.length, 'tasks');
           }).catch(err => {
             console.error('FETCH FAILED:', err.message);
             process.exit(1);
