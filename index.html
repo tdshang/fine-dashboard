@@ -52,6 +52,9 @@ body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(-
 .h-ts { font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(238,232,220,.22); }
 .btn-r { background:rgba(212,168,71,.06); border:1px solid rgba(212,168,71,.14); border-radius:6px; padding:5px 13px; font-size:11px; color:var(--gold); cursor:pointer; transition:background .15s; }
 .btn-r:hover { background:rgba(212,168,71,.13); }
+.btn-live { background:rgba(42,188,176,.07); border:1px solid rgba(42,188,176,.2); border-radius:6px; padding:5px 13px; font-size:11px; color:#2ABCB0; cursor:pointer; transition:background .15s; font-family:'IBM Plex Sans',sans-serif; font-weight:500; }
+.btn-live:hover { background:rgba(42,188,176,.14); }
+.btn-live:disabled { opacity:.4; cursor:not-allowed; }
 
 .main { padding:28px 44px; max-width:1480px; margin:0 auto; }
 
@@ -209,7 +212,10 @@ body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(-
 <body>
 
 <script>
-var TOKEN = 'pk_156056280_28EFHEYA8UPOAB9OA8O3CPGL7XPOUJVO';
+// Data is pre-fetched nightly by GitHub Actions and stored in data.json
+var DATA_URL = 'data.json';
+// Token is only used for the live refresh button — keep this file internal
+var TOKEN = 'pk_156056280_LDRARAWGYSYL46GQE85BE7HZ66U0DKXV';
 var SPACE_ID = '901313746539';
 </script>
 
@@ -217,11 +223,11 @@ var SPACE_ID = '901313746539';
   <div class="ld-brand">Optima ED</div>
   <div class="ld-title">Project F.I.N.E.</div>
   <div class="spinner"></div>
-  <div class="ld-msg" id="ld-msg">Connecting to ClickUp...</div>
+  <div class="ld-msg" id="ld-msg">Loading dashboard data...</div>
 </div>
 
 <div id="error-screen">
-  <div class="err-t">Connection failed</div>
+  <div class="err-t">Could not load data</div>
   <div class="err-m" id="err-d">Could not load dashboard data.</div>
   <button class="retry" onclick="location.reload()">Try again</button>
 </div>
@@ -236,6 +242,7 @@ var SPACE_ID = '901313746539';
     <div class="hr2">
       <div class="h-ts" id="h-ts"></div>
       <button class="btn-r" onclick="init()">↻ Refresh</button>
+      <button class="btn-live" id="btn-live" onclick="liveRefresh()">⚡ Live</button>
     </div>
   </div>
 
@@ -360,73 +367,7 @@ const TEAM = [
   {email:'hduley@optimaed.com',    name:'Heather Duley',   role:'SME',     initials:'HD'},
 ];
 
-function cu(path) {
-  return fetch('https://api.clickup.com/api/v2'+path,{headers:{Authorization:TOKEN}})
-    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
-}
 function msg(s){ document.getElementById('ld-msg').textContent=s; }
-
-async function fetchTasks(){
-  msg('Fetching project structure...');
-
-  // Step 1: get folders
-  let folders = [];
-  try {
-    const r = await cu('/space/'+SPACE_ID+'/folder?archived=false');
-    folders = r.folders || [];
-  } catch(e) { console.warn('folder fetch failed', e); }
-
-  // Step 2: get folderless lists
-  let spaceLists = [];
-  try {
-    const r = await cu('/space/'+SPACE_ID+'/list?archived=false');
-    spaceLists = r.lists || [];
-  } catch(e) { console.warn('space list fetch failed', e); }
-
-  // Step 3: get lists inside each folder
-  const folderLists = [];
-  for(const f of folders){
-    try {
-      const r = await cu('/folder/'+f.id+'/list?archived=false');
-      const lists = r.lists || [];
-      lists.forEach(l=>{ l._folderId=f.id; });
-      folderLists.push(...lists);
-    } catch(e) { console.warn('folder list fetch failed for', f.id, e); }
-  }
-
-  const allLists = [...spaceLists, ...folderLists];
-  console.log('Total lists found:', allLists.length, allLists.map(l=>l.name));
-
-  if(allLists.length === 0) throw new Error('No lists found in space '+SPACE_ID+'. Check your Space ID and token.');
-
-  // Step 4: fetch tasks from every list
-  const tasks = [];
-  const seen = new Set();
-  for(let i=0;i<allLists.length;i++){
-    const l=allLists[i];
-    msg('Loading '+(i+1)+'/'+allLists.length+': '+l.name+'...');
-    let pg=0;
-    try {
-      while(true){
-        const r = await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=false');
-        const batch = r.tasks || [];
-        batch.forEach(t=>{
-          if(!seen.has(t.id)){
-            seen.add(t.id);
-            t._lid=l.id;
-            tasks.push(t);
-          }
-        });
-        if(batch.length<100) break;
-        pg++;
-      }
-    } catch(e) { console.warn('task fetch failed for list', l.id, e); }
-  }
-
-  console.log('Total tasks fetched:', tasks.length);
-  if(tasks.length === 0) throw new Error('No tasks found. Verify your API token has access to Space '+SPACE_ID);
-  return tasks;
-}
 
 let allTasks=[];
 
@@ -435,11 +376,22 @@ async function init(){
     document.getElementById(id).style.display=id==='loading'?'flex':'none';
   });
   try{
-    allTasks=await fetchTasks();
+    msg('Loading dashboard data...');
+    const r = await fetch(DATA_URL + '?t=' + Date.now());
+    if(!r.ok) throw new Error('Could not load data.json — HTTP '+r.status+'. Has the GitHub Action run yet?');
+    const payload = await r.json();
+    allTasks = payload.tasks || [];
+    if(allTasks.length === 0) throw new Error('data.json loaded but contains no tasks. Check the GitHub Action log.');
+
     render();
     document.getElementById('loading').style.display='none';
     document.getElementById('dashboard').style.display='block';
-    document.getElementById('h-ts').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+
+    // Show when data was last fetched by the GitHub Action
+    const fetchedAt = new Date(payload.fetchedAt);
+    const timeStr = fetchedAt.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' +
+                    fetchedAt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('h-ts').textContent='Data from '+timeStr;
   }catch(e){
     document.getElementById('loading').style.display='none';
     document.getElementById('error-screen').style.display='flex';
@@ -652,6 +604,71 @@ function render(){
       <td>${num(c.done,'var(--green)')}</td>
     </tr>`;
   }).join('');
+}
+
+// ── LIVE REFRESH — bypasses cache, hits ClickUp API directly ──────────────
+function cu(path) {
+  return fetch('https://api.clickup.com/api/v2'+path,{headers:{Authorization:TOKEN}})
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+}
+
+async function liveRefresh(){
+  const btn = document.getElementById('btn-live');
+  btn.disabled = true;
+  btn.textContent = '⚡ Loading...';
+
+  document.getElementById('loading').style.display='flex';
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('ld-msg').textContent='Fetching live data from ClickUp...';
+
+  try {
+    // Fetch folders and lists
+    let folders = [];
+    try { const r=await cu('/space/'+SPACE_ID+'/folder?archived=false'); folders=r.folders||[]; } catch(e){}
+    let spaceLists = [];
+    try { const r=await cu('/space/'+SPACE_ID+'/list?archived=false'); spaceLists=r.lists||[]; } catch(e){}
+
+    const folderLists = [];
+    for(const f of folders){
+      try {
+        const r=await cu('/folder/'+f.id+'/list?archived=false');
+        (r.lists||[]).forEach(l=>{ l._folderId=f.id; folderLists.push(l); });
+      } catch(e){}
+    }
+
+    const allLists=[...spaceLists,...folderLists];
+    if(allLists.length===0) throw new Error('No lists found. Check TOKEN and SPACE_ID.');
+
+    const tasks=[], seen=new Set();
+    for(let i=0;i<allLists.length;i++){
+      const l=allLists[i];
+      document.getElementById('ld-msg').textContent='Live: '+(i+1)+'/'+allLists.length+': '+l.name+'...';
+      let pg=0;
+      try {
+        while(true){
+          const r=await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=true');
+          (r.tasks||[]).forEach(t=>{ if(!seen.has(t.id)){ seen.add(t.id); t._lid=l.id; tasks.push(t); } });
+          if((r.tasks||[]).length<100) break;
+          pg++;
+        }
+      } catch(e){}
+    }
+
+    if(tasks.length===0) throw new Error('No tasks returned. Check token permissions.');
+
+    allTasks = tasks;
+    render();
+    document.getElementById('loading').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    document.getElementById('h-ts').textContent='⚡ Live data — '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) {
+    document.getElementById('loading').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    alert('Live refresh failed: '+e.message);
+  }
+
+  btn.disabled=false;
+  btn.textContent='⚡ Live';
 }
 
 window.addEventListener('load',init);
