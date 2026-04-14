@@ -483,69 +483,67 @@ function cu(path) {
 }
 function msg(s){ document.getElementById('ld-msg').textContent=s; }
 
+// Known folder IDs — hardcoded for reliability (no discovery needed)
+const KNOWN_FOLDER_IDS = [
+  '901318021853', // Phase 0 — Pre-Sprint 0
+  '901318021854', // Phase 1 — Sprint 0 Audit
+  '901318021855', // Phase 2 — Build Sprints 1-7
+  '901318021857', // Phase 3 — QA & Deployment
+  '901318021858', // Milestones & Gates
+];
+
 async function fetchTasks(){
-  msg('Fetching project structure...');
+  msg('Fetching project lists...');
 
-  // Step 1: get folders
-  let folders = [];
-  try {
-    const r = await cu('/space/'+SPACE_ID+'/folder?archived=false');
-    folders = r.folders || [];
-  } catch(e) { console.warn('folder fetch failed', e); }
-
-  // Step 2: get folderless lists
-  let spaceLists = [];
-  try {
-    const r = await cu('/space/'+SPACE_ID+'/list?archived=false');
-    spaceLists = r.lists || [];
-  } catch(e) { console.warn('space list fetch failed', e); }
-
-  // Step 3: get lists inside each folder
-  const folderLists = [];
-  for(const f of folders){
-    try {
-      const r = await cu('/folder/'+f.id+'/list?archived=false');
+  // Step 1: Get lists from every known folder directly
+  const allLists = [];
+  for(const fid of KNOWN_FOLDER_IDS){
+    try{
+      const r = await cu('/folder/'+fid+'/list?archived=false');
       const lists = r.lists || [];
-      lists.forEach(l=>{ l._folderId=f.id; });
-      folderLists.push(...lists);
-    } catch(e) { console.warn('folder list fetch failed for', f.id, e); }
+      lists.forEach(l=>{ l._folderId=fid; allLists.push(l); });
+      console.log('Folder '+fid+': '+lists.length+' lists');
+    }catch(e){ console.warn('Failed folder '+fid, e.message); }
   }
 
-  const allLists = [...spaceLists, ...folderLists];
+  // Step 2: Also check for any folderless lists in the space
+  try{
+    const r = await cu('/space/'+SPACE_ID+'/list?archived=false');
+    (r.lists||[]).forEach(l=>allLists.push(l));
+  }catch(e){ console.warn('Space list fetch failed', e.message); }
+
   console.log('Total lists found:', allLists.length, allLists.map(l=>l.name));
+  if(allLists.length === 0) throw new Error('Could not load any lists. Check your API token and that it has access to this workspace.');
 
-  if(allLists.length === 0) throw new Error('No lists found in space '+SPACE_ID+'. Check your Space ID and token.');
-
-  // Step 4: fetch tasks from every list
+  // Step 3: Fetch tasks from every list
   const tasks = [];
   const seen = new Set();
   for(let i=0;i<allLists.length;i++){
-    const l=allLists[i];
+    const l = allLists[i];
     msg('Loading '+(i+1)+'/'+allLists.length+': '+l.name+'...');
-    let pg=0;
-    try {
+    let pg = 0;
+    try{
       while(true){
         const r = await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=true&custom_fields=true');
         const batch = r.tasks || [];
         batch.forEach(t=>{
           if(!seen.has(t.id)){
             seen.add(t.id);
-            t._lid=l.id;
+            t._lid = l.id;
+            t._folderId = l._folderId || null;
             tasks.push(t);
           }
         });
-        if(batch.length<100) break;
+        if(batch.length < 100) break;
         pg++;
       }
-    } catch(e) { console.warn('task fetch failed for list', l.id, e); }
+    }catch(e){ console.warn('Task fetch failed for list '+l.id+' ('+l.name+')', e.message); }
   }
 
   console.log('Total tasks fetched:', tasks.length);
-  if(tasks.length === 0) throw new Error('No tasks found. Verify your API token has access to Space '+SPACE_ID);
+  if(tasks.length === 0) throw new Error('Lists found ('+allLists.length+') but no tasks returned. Open browser console (F12) for details.');
   return tasks;
 }
-
-let allTasks=[];
 
 async function init(){
   ['loading','dashboard','error-screen'].forEach(id=>{
@@ -911,19 +909,15 @@ async function liveRefresh(){
   document.getElementById('dashboard').style.display='none';
   document.getElementById('ld-msg').textContent='Fetching live data from ClickUp...';
   try{
-    let folders=[];
-    try{ const r=await cuLive('/space/'+SPACE_ID+'/folder?archived=false'); folders=r.folders||[]; }catch(e){}
-    let spaceLists=[];
-    try{ const r=await cuLive('/space/'+SPACE_ID+'/list?archived=false'); spaceLists=r.lists||[]; }catch(e){}
-    const folderLists=[];
-    for(const f of folders){
+    const allLists=[];
+    for(const fid of KNOWN_FOLDER_IDS){
       try{
-        const r=await cuLive('/folder/'+f.id+'/list?archived=false');
-        (r.lists||[]).forEach(l=>{ l._folderId=f.id; folderLists.push(l); });
-      }catch(e){}
+        const r=await cuLive('/folder/'+fid+'/list?archived=false');
+        (r.lists||[]).forEach(l=>{ l._folderId=fid; allLists.push(l); });
+      }catch(e){ console.warn('Live: failed folder '+fid, e.message); }
     }
-    const allLists=[...spaceLists,...folderLists];
-    if(allLists.length===0) throw new Error('No lists found.');
+    try{ const r=await cuLive('/space/'+SPACE_ID+'/list?archived=false'); (r.lists||[]).forEach(l=>allLists.push(l)); }catch(e){}
+    if(allLists.length===0) throw new Error('No lists found. Check token.');
     const tasks=[]; const seen=new Set();
     for(let i=0;i<allLists.length;i++){
       const l=allLists[i];
