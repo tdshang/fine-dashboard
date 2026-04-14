@@ -2,25 +2,23 @@ name: Refresh FINE Dashboard Data
 
 on:
   schedule:
-    # Runs at 7:00 AM Central Time (12:00 UTC)
-    - cron: '0 12 * * *'
-  workflow_dispatch: # allows manual trigger from GitHub Actions tab
+    - cron: '0 12 * * *'  # 7:00 AM Central Time (12:00 UTC)
+  workflow_dispatch:
 
-# Give the workflow write permission to push data.json back to the repo
 permissions:
   contents: write
 
 jobs:
   fetch-clickup-data:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch ClickUp data and save to data.json
+      - name: Fetch ClickUp data with custom fields
         env:
           CLICKUP_TOKEN: ${{ secrets.CLICKUP_TOKEN }}
+          WORKSPACE_ID: '90132046480'
           SPACE_ID: '901313746539'
         run: |
           node << 'SCRIPT'
@@ -28,7 +26,18 @@ jobs:
           const fs = require('fs');
 
           const TOKEN = process.env.CLICKUP_TOKEN;
+          const WORKSPACE_ID = process.env.WORKSPACE_ID;
           const SPACE_ID = process.env.SPACE_ID;
+
+          const WORKSTREAM_FIELD_ID = 'bde6b5f2-d0e0-4fe5-98d8-0ebf7d6c76b4';
+
+          const KNOWN_FOLDER_IDS = [
+            '901318021853',
+            '901318021854',
+            '901318021855',
+            '901318021857',
+            '901318021858',
+          ];
 
           function cuGet(path) {
             return new Promise((resolve, reject) => {
@@ -36,14 +45,14 @@ jobs:
                 hostname: 'api.clickup.com',
                 path: '/api/v2' + path,
                 method: 'GET',
-                headers: { 'Authorization': TOKEN }
+                headers: { 'Authorization': TOKEN, 'Content-Type': 'application/json' }
               };
               const req = https.request(options, res => {
                 let data = '';
                 res.on('data', chunk => data += chunk);
                 res.on('end', () => {
                   try { resolve(JSON.parse(data)); }
-                  catch(e) { reject(new Error('JSON parse error: ' + data.substring(0,200))); }
+                  catch(e) { reject(new Error('JSON parse error on ' + path + ': ' + data.substring(0,200))); }
                 });
               });
               req.on('error', reject);
@@ -51,60 +60,138 @@ jobs:
             });
           }
 
-          async function fetchAll() {
-            console.log('Fetching folders...');
-            const { folders = [] } = await cuGet('/space/' + SPACE_ID + '/folder?archived=false');
+          function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+          }
 
-            console.log('Fetching folderless lists...');
-            const { lists: spaceLists = [] } = await cuGet('/space/' + SPACE_ID + '/list?archived=false');
-
-            const folderLists = [];
-            for (const f of folders) {
-              const { lists = [] } = await cuGet('/folder/' + f.id + '/list?archived=false');
-              lists.forEach(l => { l._folderId = f.id; });
-              folderLists.push(...lists);
+          async function fetchAllTasks() {
+            // Step 1: Get all lists from known folders
+            const allLists = [];
+            for (const fid of KNOWN_FOLDER_IDS) {
+              try {
+                const r = await cuGet('/folder/' + fid + '/list?archived=false');
+                (r.lists || []).forEach(l => { l._folderId = fid; allLists.push(l); });
+                console.log('Folder ' + fid + ': ' + (r.lists||[]).length + ' lists');
+              } catch(e) { console.warn('Folder ' + fid + ' failed:', e.message); }
             }
+            // Also get folderless lists
+            try {
+              const r = await cuGet('/space/' + SPACE_ID + '/list?archived=false');
+              (r.lists||[]).forEach(l => allLists.push(l));
+            } catch(e) {}
 
-            const allLists = [...spaceLists, ...folderLists];
             console.log('Total lists:', allLists.length);
 
+            // Step 2: Fetch tasks from every list (no custom_fields param — works reliably)
             const tasks = [];
             const seen = new Set();
-
             for (let i = 0; i < allLists.length; i++) {
               const l = allLists[i];
-              console.log('Fetching list ' + (i+1) + '/' + allLists.length + ': ' + l.name);
+              console.log('List ' + (i+1) + '/' + allLists.length + ': ' + l.name);
               let page = 0;
               while (true) {
-                const { tasks: batch = [] } = await cuGet(
-                  '/list/' + l.id + '/task?page=' + page + '&include_closed=true&subtasks=true'
-                );
-                batch.forEach(t => {
-                  if (!seen.has(t.id)) {
-                    seen.add(t.id);
-                    t._lid = l.id;
-                    tasks.push(t);
-                  }
-                });
-                if (batch.length < 100) break;
-                page++;
+                try {
+                  const r = await cuGet('/list/' + l.id + '/task?page=' + page + '&include_closed=true&subtasks=true');
+                  const batch = r.tasks || [];
+                  batch.forEach(t => {
+                    if (!seen.has(t.id)) {
+                      seen.add(t.id);
+                      t._lid = l.id;
+                      t._folderId = l._folderId || null;
+                      tasks.push(t);
+                    }
+                  });
+                  if (batch.length < 100) break;
+                  page++;
+                } catch(e) {
+                  console.warn('List ' + l.id + ' failed:', e.message);
+                  break;
+                }
               }
             }
 
-            console.log('Total tasks fetched:', tasks.length);
+            console.log('Total tasks before custom fields:', tasks.length);
+            return { tasks, allLists };
+          }
+
+          async function enrichWithCustomFields(tasks) {
+            // Step 3: For each unique task, fetch its custom fields individually
+            // We do this server-side where we can afford sequential calls
+            // Rate limit: ~100 req/min, so we add small delays
+            const BATCH_SIZE = 50;
+            let enriched = 0;
+            let failed = 0;
+
+            for (let i = 0; i < tasks.length; i++) {
+              const t = tasks[i];
+              // Only fetch custom fields for top-level tasks (not subtasks)
+              // to keep the request count manageable
+              if (t.parent) continue;
+
+              try {
+                const detail = await cuGet('/task/' + t.id + '?custom_fields=true');
+                if (detail.custom_fields) {
+                  t.custom_fields = detail.custom_fields;
+                  // Extract workstream value for easy lookup
+                  const wsField = detail.custom_fields.find(f => f.id === WORKSTREAM_FIELD_ID);
+                  if (wsField && wsField.value) {
+                    t._workstream = wsField.value.name || wsField.value;
+                    t._workstream_id = wsField.value.id || wsField.value;
+                  }
+                }
+                enriched++;
+              } catch(e) {
+                failed++;
+              }
+
+              // Rate limit: pause every 50 requests
+              if (i > 0 && i % BATCH_SIZE === 0) {
+                console.log('Progress: ' + i + '/' + tasks.length + ' enriched, sleeping...');
+                await sleep(1000);
+              }
+            }
+
+            console.log('Custom fields enriched: ' + enriched + ', failed: ' + failed);
             return tasks;
           }
 
-          fetchAll().then(tasks => {
+          async function main() {
+            console.log('Starting FINE dashboard data fetch...');
+            const { tasks } = await fetchAllTasks();
+
+            console.log('Enriching tasks with custom fields...');
+            const enrichedTasks = await enrichWithCustomFields(tasks);
+
+            // Build workstream summary for quick dashboard rendering
+            const workstreamSummary = {};
+            enrichedTasks.forEach(t => {
+              const ws = t._workstream || 'Unassigned';
+              if (!workstreamSummary[ws]) {
+                workstreamSummary[ws] = { total: 0, complete: 0, inProgress: 0, blocked: 0, atRisk: 0, notStarted: 0 };
+              }
+              const s = (t.status?.status || '').toLowerCase().trim();
+              workstreamSummary[ws].total++;
+              if (s === 'complete' || s === 'closed') workstreamSummary[ws].complete++;
+              else if (s === 'in progress') workstreamSummary[ws].inProgress++;
+              else if (s === 'blocked') workstreamSummary[ws].blocked++;
+              else if (s === 'at risk') workstreamSummary[ws].atRisk++;
+              else workstreamSummary[ws].notStarted++;
+            });
+
             const output = {
               fetchedAt: new Date().toISOString(),
-              taskCount: tasks.length,
-              tasks: tasks
+              taskCount: enrichedTasks.length,
+              workstreamSummary,
+              tasks: enrichedTasks
             };
+
             fs.writeFileSync('data.json', JSON.stringify(output));
-            console.log('data.json written with', tasks.length, 'tasks');
-          }).catch(err => {
-            console.error('FETCH FAILED:', err.message);
+            console.log('data.json written with ' + enrichedTasks.length + ' tasks');
+            console.log('Workstreams found:', Object.keys(workstreamSummary).join(', '));
+          }
+
+          main().catch(err => {
+            console.error('FAILED:', err.message);
             process.exit(1);
           });
           SCRIPT
