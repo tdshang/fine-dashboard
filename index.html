@@ -1,1034 +1,660 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROJECT F.I.N.E. — Executive Dashboard</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+name: Refresh FINE Dashboard
 
-:root {
-  --bg: #060C13;
-  --s1: #0C1826;
-  --s2: #101F30;
-  --border: rgba(255,255,255,0.055);
-  --gold: #D4A847;
-  --gold2: #F0C96A;
-  --cream: #EEE8DC;
-  --muted: rgba(238,232,220,0.38);
-  --green: #27B97C;
-  --blue: #3A9CE4;
-  --amber: #E09828;
-  --red: #DC4E4E;
-  --purple: #8B70E6;
-  --teal: #2ABCB0;
-}
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
 
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(--cream); min-height:100vh; background-image:radial-gradient(ellipse 100% 30% at 50% -5%, rgba(212,168,71,0.055) 0%, transparent 70%); }
+permissions:
+  contents: write
 
-/* LOADING */
-#loading { min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:20px; }
-.ld-brand { font-family:'Playfair Display',serif; font-size:11px; letter-spacing:0.4em; text-transform:uppercase; color:var(--gold); opacity:.7; }
-.ld-title { font-family:'Playfair Display',serif; font-size:30px; color:var(--cream); }
-.spinner { width:28px; height:28px; border:2px solid rgba(212,168,71,.1); border-top-color:var(--gold); border-radius:50%; animation:spin .7s linear infinite; }
-.ld-msg { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); }
-@keyframes spin { to { transform:rotate(360deg); } }
+jobs:
+  build-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-#error-screen { min-height:100vh; display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
-.err-t { font-family:'Playfair Display',serif; font-size:22px; color:var(--red); }
-.err-m { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); max-width:360px; text-align:center; line-height:1.7; }
-.retry { background:rgba(212,168,71,.07); border:1px solid rgba(212,168,71,.18); border-radius:8px; padding:9px 22px; color:var(--gold); font-size:12px; cursor:pointer; }
+      - name: Write build script
+        run: |
+          cat > build.js << 'JSEOF'
+          const https = require('https');
+          const fs = require('fs');
 
-#dashboard { display:none; }
+          const TOKEN = process.env.CLICKUP_TOKEN;
+          const SPACE = process.env.SPACE_ID;
+          const WORKSTREAM_FIELD = 'bde6b5f2-d0e0-4fe5-98d8-0ebf7d6c76b4';
+          const RETREAT = new Date('2026-07-28');
 
-/* HEADER */
-.header { border-bottom:1px solid var(--border); padding:0 44px; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; background:rgba(6,12,19,.92); backdrop-filter:blur(14px); }
-.hl { display:flex; align-items:center; gap:16px; }
-.h-brand { font-family:'Playfair Display',serif; font-size:10px; letter-spacing:.38em; text-transform:uppercase; color:var(--gold); }
-.h-div { width:1px; height:15px; background:rgba(212,168,71,.16); }
-.h-name { font-size:13px; color:rgba(238,232,220,.55); }
-.hr2 { display:flex; align-items:center; gap:10px; }
-.h-ts { font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(238,232,220,.22); }
-.btn-r { background:rgba(212,168,71,.06); border:1px solid rgba(212,168,71,.14); border-radius:6px; padding:5px 13px; font-size:11px; color:var(--gold); cursor:pointer; transition:background .15s; }
-.btn-r:hover { background:rgba(212,168,71,.13); }
-.btn-live { background:rgba(42,188,176,.07); border:1px solid rgba(42,188,176,.2); border-radius:6px; padding:5px 13px; font-size:11px; color:#2ABCB0; cursor:pointer; transition:background .15s; font-family:'IBM Plex Sans',sans-serif; font-weight:500; }
-.btn-live:hover { background:rgba(42,188,176,.14); }
-.btn-live:disabled { opacity:.4; cursor:not-allowed; }
+          const KNOWN_FOLDERS = ['901318021853','901318021854','901318021855','901318021857','901318021858'];
 
-.main { padding:28px 44px; max-width:1480px; margin:0 auto; }
+          const TEAM_INFO = {
+            'tshang@optimaed.com':    {name:'Tina Shang',      role:'DET',     initials:'TS'},
+            'vjordan@optimaed.com':   {name:'Vince Jordan',    role:'CTO',     initials:'VJ'},
+            'doverby@optimaed.com':   {name:'Dylan Overby',    role:'TL/PD',   initials:'DO'},
+            'jstiles@optimaed.com':   {name:'Jay Stiles',      role:'AI/FSD',  initials:'JS'},
+            'hmangrum@optimaed.com':  {name:'Heather Mangrum', role:'UD',      initials:'HM'},
+            'rbezzina@optimaed.com':  {name:'Rachel Bezzina',  role:'Video',   initials:'RB'},
+            'scozart@optimaed.com':   {name:'Sydney Carter',   role:'Asset',   initials:'SC'},
+            'gwarren@optimaed.com':   {name:'Gabe Warren',     role:'Asset',   initials:'GW'},
+            'jolson@optimaed.com':    {name:'Jonathan Olson',  role:'SME Lead',initials:'JO'},
+            'rwalker@optimaed.com':   {name:'Ryan Walker',     role:'SME',     initials:'RW'},
+            'sdevereaux@optimaed.com':{name:'Sarah Devereaux', role:'SME',     initials:'SD'},
+            'jbergel@optimaed.com':   {name:'Jessica Bergel',  role:'SME',     initials:'JB'},
+            'hduley@optimaed.com':    {name:'Heather Duley',   role:'SME',     initials:'HD'},
+          };
 
-/* TOP ROW */
-.top-row { display:grid; grid-template-columns:280px 1fr 160px; gap:18px; margin-bottom:22px; align-items:stretch; }
+          const TEAM_LIST = Object.entries(TEAM_INFO).map(([email,v]) => ({email,...v}));
 
-/* DONUT */
-.donut-card { background:var(--s1); border:1px solid var(--border); border-radius:14px; padding:24px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; position:relative; overflow:hidden; }
-.donut-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-.dc-lbl { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); font-weight:500; }
-.dw { position:relative; width:150px; height:150px; }
-.donut-svg { transform:rotate(-90deg); }
-.dc { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-.d-pct { font-family:'Playfair Display',serif; font-size:38px; color:var(--cream); line-height:1; }
-.d-lbl { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:2px; }
-.d-health { font-size:11px; color:var(--muted); text-align:center; line-height:1.5; padding:0 6px; }
+          const WS_ORDER = ['ENGAGE Documentation','Asset Migration','Project Oversight',
+            'Sprint 0 Audit',' Sprint 0 Audit','AI Avatars','Platform Integration',
+            'K-12 Account Model','Forms System','Canvas LTI','COPPA/FERPA',
+            'Education Environments','Experience & ILE','Web Companion',
+            'Media Library','Analytics Layer','Training','QA & Deployment'];
 
-/* STATS */
-.stats-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
-.sc { background:var(--s1); border:1px solid var(--border); border-radius:12px; padding:16px 18px; position:relative; overflow:hidden; }
-.sc::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--cc); }
-.sc-num { font-family:'Playfair Display',serif; font-size:44px; color:var(--cream); line-height:1; margin-bottom:4px; }
-.sc-lbl { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:500; }
-.sc-bar { height:3px; background:rgba(255,255,255,.05); border-radius:2px; overflow:hidden; margin-top:10px; }
-.sc-fill { height:100%; border-radius:2px; transition:width 1.1s ease; background:var(--cc); }
+          const COLORS = {
+            notStarted:'#4a4a6a', inProgress:'#7c6fcd', done:'#6bc97e',
+            atRisk:'#f0a030', blocked:'#e05050', closed:'#6bc97e'
+          };
 
-/* COUNTDOWN */
-.countdown { background:var(--s1); border:1px solid var(--border); border-radius:14px; padding:20px 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:5px; position:relative; overflow:hidden; }
-.countdown::before { content:''; position:absolute; inset:0; border-radius:14px; background:radial-gradient(ellipse at 50% 0%, rgba(212,168,71,.07), transparent 65%); pointer-events:none; }
-.cd-emoji { font-size:22px; }
-.cd-num { font-family:'Playfair Display',serif; font-size:64px; color:var(--gold); line-height:1; }
-.cd-unit { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); }
-.cd-event { font-size:11px; color:var(--cream); font-weight:500; margin-top:3px; }
-.cd-sub { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); }
+          const AV_COLORS = ['#7c6fcd','#6bc97e','#f0a030','#e05050','#3B9FE8','#2ABCB0','#E05C9A','#ab4aba','#3e63dd','#D4A847'];
 
-/* SECTION HEADERS */
-.sh { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; margin-top:24px; }
-.st { font-family:'Playfair Display',serif; font-size:18px; color:var(--cream); }
-.sb { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold); background:rgba(212,168,71,.07); border:1px solid rgba(212,168,71,.12); padding:3px 10px; border-radius:20px; }
-
-/* WORKSTREAM GRID */
-.ws-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:13px; margin-bottom:24px; }
-.ws-card { background:var(--s1); border:1px solid var(--border); border-radius:12px; padding:17px 19px; position:relative; overflow:hidden; transition:transform .15s, border-color .15s; }
-.ws-card:hover { transform:translateY(-2px); border-color:rgba(255,255,255,.09); }
-.ws-card::before { content:''; position:absolute; top:0; left:0; bottom:0; width:3px; background:var(--wc); border-radius:12px 0 0 12px; }
-.ws-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:11px; }
-.ws-name { font-size:13px; font-weight:600; color:var(--cream); line-height:1.3; padding-left:10px; flex:1; }
-.ws-badge { font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; padding:2px 8px; border-radius:4px; flex-shrink:0; margin-left:8px; }
-.wb-good { background:rgba(39,185,124,.15); color:var(--green); }
-.wb-warn { background:rgba(224,152,40,.15); color:var(--amber); }
-.wb-bad { background:rgba(220,78,78,.15); color:var(--red); }
-.wb-idle { background:rgba(255,255,255,.06); color:var(--muted); }
-.ws-bar-bg { height:5px; background:rgba(255,255,255,.05); border-radius:3px; overflow:hidden; margin-bottom:9px; margin-left:10px; }
-.ws-bar-fill { height:100%; border-radius:3px; transition:width 1s ease; background:var(--wc); }
-.ws-meta { display:flex; align-items:center; gap:10px; padding-left:10px; flex-wrap:wrap; }
-.wm { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); }
-.wm b { color:var(--cream); }
-.wo { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); margin-left:auto; }
-
-/* TWO COL */
-.two-col { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:20px; }
-.panel { background:var(--s1); border:1px solid var(--border); border-radius:12px; padding:22px; }
-.ph { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-.pt { font-family:'Playfair Display',serif; font-size:16px; color:var(--cream); }
-.pc { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); background:rgba(212,168,71,.07); border:1px solid rgba(212,168,71,.12); padding:3px 10px; border-radius:20px; }
-
-/* BLOCKED */
-.bi { display:flex; align-items:flex-start; gap:12px; padding:11px 14px; background:rgba(220,78,78,.05); border:1px solid rgba(220,78,78,.12); border-radius:8px; margin-bottom:8px; transition:background .15s; }
-.bi:last-child { margin-bottom:0; }
-.bi:hover { background:rgba(220,78,78,.09); }
-.bi-dot { width:6px; height:6px; border-radius:50%; background:var(--red); flex-shrink:0; margin-top:4px; }
-.bi-body { flex:1; }
-.bi-name { font-size:12px; font-weight:500; color:var(--cream); margin-bottom:3px; line-height:1.4; }
-.bi-row { display:flex; align-items:center; gap:8px; }
-.bi-who { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); }
-.bi-due { font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(220,78,78,.8); background:rgba(220,78,78,.09); padding:1px 6px; border-radius:3px; }
-
-/* MILESTONES */
-.mi { display:flex; align-items:center; gap:12px; padding:11px 14px; background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.04); border-radius:8px; margin-bottom:8px; transition:background .15s; }
-.mi:last-child { margin-bottom:0; }
-.mi.done { background:rgba(39,185,124,.04); border-color:rgba(39,185,124,.12); }
-.mi.over { background:rgba(220,78,78,.04); border-color:rgba(220,78,78,.12); }
-.mi-icon { font-size:12px; flex-shrink:0; }
-.mi-name { flex:1; font-size:12px; font-weight:500; color:var(--cream); line-height:1.4; }
-.mi-name.done { color:var(--muted); text-decoration:line-through; }
-.mi-date { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); flex-shrink:0; }
-.mi-badge { font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:4px; flex-shrink:0; }
-.mb-done { background:rgba(39,185,124,.14); color:var(--green); }
-.mb-up { background:rgba(212,168,71,.1); color:var(--gold); }
-.mb-over { background:rgba(220,78,78,.14); color:var(--red); }
-
-/* FULL PANEL */
-.fp { background:var(--s1); border:1px solid var(--border); border-radius:12px; padding:22px; margin-bottom:20px; }
-
-/* ── TEAM HEALTH TABLE ───────────────────────────────────── */
-.team-table { width:100%; border-collapse:collapse; }
-.team-table th {
-  font-size:10px; letter-spacing:.12em; text-transform:uppercase;
-  color:var(--muted); font-weight:500; padding:8px 12px;
-  border-bottom:1px solid var(--border); text-align:left;
-}
-.team-table th:not(:first-child) { text-align:center; }
-.team-table td { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.03); vertical-align:middle; }
-.team-table tr:last-child td { border-bottom:none; }
-.team-table tr:hover td { background:rgba(255,255,255,.02); }
-
-.tm-person { display:flex; align-items:center; gap:10px; }
-.tm-av { width:28px; height:28px; border-radius:50%; background:var(--s2); border:1.5px solid rgba(212,168,71,.2); display:flex; align-items:center; justify-content:center; font-family:'Playfair Display',serif; font-size:11px; color:var(--gold); flex-shrink:0; }
-.tm-name { font-size:12px; font-weight:600; color:var(--cream); }
-.tm-role { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); }
-
-.tm-num { font-family:'Playfair Display',serif; font-size:20px; text-align:center; }
-.tm-zero { color:rgba(238,232,220,.18); font-size:14px; }
-
-.health-pill {
-  display:inline-flex; align-items:center; justify-content:center;
-  gap:5px; padding:3px 10px; border-radius:20px;
-  font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
-  white-space:nowrap;
-}
-.hp-good { background:rgba(39,185,124,.12); color:var(--green); border:1px solid rgba(39,185,124,.2); }
-.hp-warn { background:rgba(224,152,40,.12); color:var(--amber); border:1px solid rgba(224,152,40,.2); }
-.hp-bad  { background:rgba(220,78,78,.12); color:var(--red); border:1px solid rgba(220,78,78,.2); }
-.hp-idle { background:rgba(255,255,255,.05); color:var(--muted); border:1px solid rgba(255,255,255,.06); }
-
-.overdue-count { font-family:'IBM Plex Mono',monospace; font-size:18px; color:var(--red); font-weight:500; text-align:center; display:block; }
-.overdue-zero { font-family:'IBM Plex Mono',monospace; font-size:14px; color:rgba(238,232,220,.18); text-align:center; display:block; }
-
-/* ── DUE THIS WEEK ──────────────────────────────────────── */
-.due-week-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:10px; }
-
-.dw-card { background:var(--s2); border:1px solid var(--border); border-radius:9px; padding:13px 16px; display:flex; align-items:flex-start; gap:12px; transition:background .15s; }
-.dw-card:hover { background:rgba(255,255,255,.04); }
-.dw-card.overdue { border-color:rgba(220,78,78,.2); background:rgba(220,78,78,.04); }
-.dw-card.today { border-color:rgba(224,152,40,.2); background:rgba(224,152,40,.04); }
-
-.dw-date { flex-shrink:0; text-align:center; width:40px; }
-.dw-day { font-family:'Playfair Display',serif; font-size:20px; color:var(--cream); line-height:1; }
-.dw-mon { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; }
-.dw-card.overdue .dw-day { color:var(--red); }
-.dw-card.today .dw-day { color:var(--amber); }
-
-.dw-body { flex:1; min-width:0; }
-.dw-name { font-size:12px; font-weight:500; color:var(--cream); line-height:1.4; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dw-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-.dw-who { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); }
-.dw-tag { font-size:10px; padding:1px 6px; border-radius:3px; font-family:'IBM Plex Mono',monospace; }
-.dt-overdue { background:rgba(220,78,78,.12); color:var(--red); }
-.dt-today { background:rgba(224,152,40,.12); color:var(--amber); }
-.dt-soon { background:rgba(58,156,228,.1); color:var(--blue); }
-
-.empty { text-align:center; padding:28px; color:rgba(238,232,220,.18); font-size:12px; }
-
-/* ── WORKSTREAM DRILL-DOWN PANEL ─────────────────────────── */
-.ws-overlay {
-  position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:200;
-  display:none; align-items:flex-start; justify-content:flex-end;
-  backdrop-filter:blur(4px);
-}
-.ws-overlay.open { display:flex; }
-
-.ws-panel {
-  background:var(--s1); border-left:1px solid var(--border);
-  width:520px; max-width:92vw; height:100vh;
-  display:flex; flex-direction:column;
-  animation:slideIn .2s ease;
-}
-@keyframes slideIn { from { transform:translateX(40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
-
-.ws-panel-hdr {
-  padding:20px 24px; border-bottom:1px solid var(--border);
-  display:flex; align-items:center; gap:12px; flex-shrink:0;
-}
-.ws-panel-stripe { width:4px; height:32px; border-radius:2px; flex-shrink:0; }
-.ws-panel-info { flex:1; }
-.ws-panel-title { font-family:'Playfair Display',serif; font-size:18px; color:var(--cream); }
-.ws-panel-sub { font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; margin-top:2px; }
-.ws-panel-close {
-  width:28px; height:28px; border-radius:6px;
-  background:rgba(255,255,255,.05); border:1px solid var(--border);
-  color:var(--muted); cursor:pointer; font-size:16px;
-  display:flex; align-items:center; justify-content:center;
-  transition:all .15s; flex-shrink:0;
-}
-.ws-panel-close:hover { background:rgba(255,255,255,.1); color:var(--cream); }
-
-.ws-panel-body { flex:1; overflow-y:auto; padding:20px 24px; }
-.ws-panel-body::-webkit-scrollbar { width:4px; }
-.ws-panel-body::-webkit-scrollbar-track { background:transparent; }
-.ws-panel-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:2px; }
-
-/* status groups inside panel */
-.ws-group { margin-bottom:20px; }
-.ws-group-hdr {
-  display:flex; align-items:center; gap:8px; margin-bottom:10px;
-  cursor:pointer; user-select:none;
-}
-.ws-group-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-.ws-group-name { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
-.ws-group-count { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); margin-left:auto; }
-.ws-group-toggle { font-size:10px; color:var(--muted); margin-left:4px; transition:transform .15s; }
-.ws-group-toggle.collapsed { transform:rotate(-90deg); }
-
-.ws-task-list { display:flex; flex-direction:column; gap:6px; }
-.ws-task-list.collapsed { display:none; }
-
-.ws-task {
-  display:flex; align-items:flex-start; gap:10px;
-  padding:10px 12px;
-  background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.04);
-  border-radius:7px; transition:background .15s;
-}
-.ws-task:hover { background:rgba(255,255,255,.04); }
-.ws-task.blocked { background:rgba(220,78,78,.05); border-color:rgba(220,78,78,.12); }
-.ws-task.overdue { background:rgba(224,152,40,.05); border-color:rgba(224,152,40,.1); }
-.ws-task.done { opacity:.45; }
-
-.ws-task-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; margin-top:4px; }
-.ws-task-body { flex:1; min-width:0; }
-.ws-task-name { font-size:12px; font-weight:500; color:var(--cream); line-height:1.4; margin-bottom:3px; }
-.ws-task-name.done { text-decoration:line-through; color:var(--muted); }
-.ws-task-meta { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
-.ws-task-who { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); }
-.ws-task-due { font-family:'IBM Plex Mono',monospace; font-size:10px; }
-.ws-task-due.overdue { color:var(--red); background:rgba(220,78,78,.1); padding:1px 5px; border-radius:3px; }
-.ws-task-due.upcoming { color:var(--muted); }
-
-.ws-notstarted-toggle {
-  display:flex; align-items:center; gap:8px; padding:9px 12px;
-  background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.04);
-  border-radius:7px; cursor:pointer; transition:background .15s;
-  font-size:11px; color:var(--muted); margin-top:4px;
-}
-.ws-notstarted-toggle:hover { background:rgba(255,255,255,.04); }
-</style>
-</head>
-<body>
-
-<script>
-var TOKEN = 'pk_156056280_LDRARAWGYSYL46GQE85BE7HZ66U0DKXV';
-var SPACE_ID = '901313746539';
-// GitHub config for triggering the Actions workflow
-var GITHUB_OWNER = 'tdshang';
-var GITHUB_REPO = 'fine-dashboard';
-var GITHUB_TOKEN = 'pk_156056280_LDRARAWGYSYL46GQE85BE7HZ66U0DKXV'; // GitHub Personal Access Token (needs repo + actions scope)
-var GITHUB_WORKFLOW = 'fetch-data.yml';
-</script>
-
-<div id="loading">
-  <div class="ld-brand">Optima ED</div>
-  <div class="ld-title">Project F.I.N.E.</div>
-  <div class="spinner"></div>
-  <div class="ld-msg" id="ld-msg">Connecting to ClickUp...</div>
-</div>
-
-<div id="error-screen">
-  <div class="err-t">Connection failed</div>
-  <div class="err-m" id="err-d">Could not load dashboard data.</div>
-  <button class="retry" onclick="location.reload()">Try again</button>
-</div>
-
-<div id="dashboard">
-  <div class="header">
-    <div class="hl">
-      <div class="h-brand">Optima ED</div>
-      <div class="h-div"></div>
-      <div class="h-name">Project F.I.N.E. — Executive Dashboard</div>
-    </div>
-    <div class="hr2">
-      <div class="h-ts" id="h-ts"></div>
-      <button class="btn-r" onclick="init()">↻ Refresh</button>
-      <button class="btn-live" id="btn-live" onclick="liveRefresh()">⚡ Live</button>
-    </div>
-  </div>
-
-  <div class="main">
-
-    <!-- TOP ROW -->
-    <div class="top-row">
-      <div class="donut-card">
-        <div class="dc-lbl">Overall Progress</div>
-        <div class="dw">
-          <svg class="donut-svg" width="150" height="150" viewBox="0 0 150 150">
-            <circle cx="75" cy="75" r="58" fill="none" stroke="rgba(255,255,255,.04)" stroke-width="13"/>
-            <circle id="d-ring" cx="75" cy="75" r="58" fill="none" stroke="var(--gold)" stroke-width="13"
-              stroke-linecap="round" stroke-dasharray="0 365" style="transition:stroke-dasharray 1.3s cubic-bezier(.4,0,.2,1)"/>
-          </svg>
-          <div class="dc">
-            <div class="d-pct" id="d-pct">0%</div>
-            <div class="d-lbl">complete</div>
-          </div>
-        </div>
-        <div class="d-health" id="d-health"></div>
-      </div>
-
-      <div class="stats-grid">
-        <div class="sc" style="--cc:#27B97C"><div class="sc-num" id="sc">—</div><div class="sc-lbl">Complete</div><div class="sc-bar"><div class="sc-fill" id="sc-b" style="width:0%"></div></div></div>
-        <div class="sc" style="--cc:#3A9CE4"><div class="sc-num" id="si">—</div><div class="sc-lbl">In Progress</div><div class="sc-bar"><div class="sc-fill" id="si-b" style="width:0%"></div></div></div>
-        <div class="sc" style="--cc:#D4A847"><div class="sc-num" id="sn">—</div><div class="sc-lbl">Not Started</div><div class="sc-bar"><div class="sc-fill" id="sn-b" style="width:0%"></div></div></div>
-        <div class="sc" style="--cc:#E09828"><div class="sc-num" id="sa">—</div><div class="sc-lbl">At Risk</div><div class="sc-bar"><div class="sc-fill" id="sa-b" style="width:0%"></div></div></div>
-        <div class="sc" style="--cc:#DC4E4E"><div class="sc-num" id="sb">—</div><div class="sc-lbl">Blocked</div><div class="sc-bar"><div class="sc-fill" id="sb-b" style="width:0%"></div></div></div>
-      </div>
-
-      <div class="countdown">
-        <div class="cd-emoji">🎓</div>
-        <div class="cd-num" id="cd-n">—</div>
-        <div class="cd-unit">days to retreat</div>
-        <div class="cd-event">Teacher Training</div>
-        <div class="cd-sub">July 28–31, 2026</div>
-      </div>
-    </div>
-
-    <!-- WORKSTREAMS -->
-    <div class="sh">
-      <div class="st">Workstream Progress</div>
-      <div class="sb" id="ws-sb">— workstreams</div>
-    </div>
-    <div class="ws-grid" id="ws-grid"></div>
-
-    <!-- BLOCKED + MILESTONES -->
-    <div class="two-col">
-      <div class="panel">
-        <div class="ph"><div class="pt">Blocked Tasks</div><div class="pc" id="blk-c">—</div></div>
-        <div id="blk-list"></div>
-      </div>
-      <div class="panel">
-        <div class="ph"><div class="pt">Milestones & Gates</div><div class="pc" id="ms-c">—</div></div>
-        <div id="ms-list"></div>
-      </div>
-    </div>
-
-    <!-- DUE THIS WEEK -->
-    <div class="fp">
-      <div class="ph">
-        <div class="pt">Due This Week</div>
-        <div class="pc" id="week-c">—</div>
-      </div>
-      <div class="due-week-grid" id="week-grid"></div>
-    </div>
-
-    <!-- TEAM HEALTH -->
-    <div class="fp">
-      <div class="ph">
-        <div class="pt">Team Health</div>
-        <div class="pc">13 Members</div>
-      </div>
-      <table class="team-table">
-        <thead>
-          <tr>
-            <th>Team Member</th>
-            <th>Health</th>
-            <th>Overdue</th>
-            <th>Blocked</th>
-            <th>Due This Week</th>
-            <th>In Progress</th>
-            <th>Complete</th>
-          </tr>
-        </thead>
-        <tbody id="team-tbody"></tbody>
-      </table>
-    </div>
-
-  </div>
-</div>
-
-<!-- WORKSTREAM DRILL-DOWN OVERLAY -->
-<div class="ws-overlay" id="ws-overlay" onclick="closeWorkstream(event)">
-  <div class="ws-panel" id="ws-panel">
-    <div class="ws-panel-hdr">
-      <div class="ws-panel-stripe" id="ws-panel-stripe"></div>
-      <div class="ws-panel-info">
-        <div class="ws-panel-title" id="ws-panel-title">Workstream</div>
-        <div class="ws-panel-sub" id="ws-panel-sub"></div>
-      </div>
-      <div class="ws-panel-close" onclick="closeWorkstream(null)">✕</div>
-    </div>
-    <div class="ws-panel-body" id="ws-panel-body"></div>
-  </div>
-</div>
-
-<script>
-const RETREAT = new Date('2026-07-28');
-
-// Workstream names must match EXACTLY what's in your ClickUp Workstream custom field dropdown
-// Order = project flow order (Phase 0 first through deployment last)
-// wsKey = exact name from ClickUp dropdown | listIds = fallback if custom field not set
-const WORKSTREAMS = [
-  // Phase 0
-  { name:'ENGAGE Documentation',   wsKeys:['ENGAGE Documentation'], owner:'SMEs + Heather',     color:'#3e85c7',
-    listIds:['901326821482'] },
-  { name:'Asset Migration',         wsKeys:['Asset Migration'],   owner:'Sydney + Gabe',         color:'#D4A847',
-    listIds:['901326821483'] },
-  { name:'Project Oversight',       wsKeys:['Project Oversight'], owner:'Tina + Vince',          color:'#0091ff',
-    listIds:['901326821484','901326821493'] },
-  // Phase 1
-  { name:'Sprint 0 Audit',          wsKeys:[' Sprint 0 Audit','Sprint 0 Audit'], owner:'Dylan + Team', color:'#6647f0',
-    listIds:['901326821485','901326821486','901326821487','901326821488','901326821489','901326821490','901326821491','901326821492','901326821496','901326821498'] },
-  { name:'AI Avatars',              wsKeys:['AI Avatars'],        owner:'Jay + Tina + Jonathan', color:'#2ABCB0',
-    listIds:['901326821501'] },
-  // Phase 2 — Build
-  { name:'Platform Integration',   wsKeys:['Platform Integration'], owner:'Dylan Overby',       color:'#FF4081',
-    listIds:['901326821499'] },
-  { name:'K-12 Account Model',      wsKeys:['K-12 Account Model'], owner:'Dylan Overby',        color:'#8dcec3',
-    listIds:['901326821499'] },
-  { name:'Forms System',            wsKeys:['Forms System'],      owner:'Dylan Overby',          color:'#7C4DFF',
-    listIds:['901326821500'] },
-  { name:'Canvas LTI',              wsKeys:['Canvas LTI'],        owner:'Dylan Overby',          color:'#b6b6ff',
-    listIds:['901326821500'] },
-  { name:'COPPA/FERPA',             wsKeys:['COPPA/FERPA'],       owner:'Tina + Dylan',          color:'#96c7f2',
-    listIds:['901326821502'] },
-  { name:'Education Environments',  wsKeys:['Education Environments'], owner:'Asset Team',      color:'#E09828',
-    listIds:['901326821502'] },
-  { name:'Experience & ILE',        wsKeys:['Experience & ILE'],  owner:'SMEs + Heather',        color:'#ffaa7d',
-    listIds:['901326821501','901326821502','901326821503'] },
-  { name:'Web Companion',           wsKeys:['Web Companion'],     owner:'Dylan Overby',          color:'#3e63dd',
-    listIds:['901326821503'] },
-  { name:'Media Library',           wsKeys:['Media Library'],     owner:'Asset Team',            color:'#ab4aba',
-    listIds:['901326821503','901326821504'] },
-  { name:'Analytics Layer',         wsKeys:['Analytics Layer'],   owner:'Dylan + Tina',          color:'#30a46c',
-    listIds:['901326821503','901326821504'] },
-  // Phase 3
-  { name:'QA & Deployment',         wsKeys:['Analytics Layer','QA & Deployment'], owner:'Dylan + Tina', color:'#F0C96A',
-    listIds:['901326821506','901326821508'] },
-  { name:'Training',                wsKeys:['Training'],          owner:'SMEs + Tina',           color:'#27B97C',
-    listIds:['901326821507','901326821509'] },
-];
-
-const TEAM = [
-  {email:'tshang@optimaed.com',    name:'Tina Shang',      role:'DET',     initials:'TS'},
-  {email:'vjordan@optimaed.com',   name:'Vince Jordan',    role:'CTO',     initials:'VJ'},
-  {email:'doverby@optimaed.com',   name:'Dylan Overby',    role:'TL/PD',   initials:'DO'},
-  {email:'jstiles@optimaed.com',   name:'Jay Stiles',      role:'AI/FSD',  initials:'JS'},
-  {email:'hmangrum@optimaed.com',  name:'Heather Mangrum', role:'UD',      initials:'HM'},
-  {email:'rbezzina@optimaed.com',  name:'Rachel Bezzina',  role:'Video',   initials:'RB'},
-  {email:'scozart@optimaed.com',   name:'Sydney Carter',   role:'Asset',   initials:'SC'},
-  {email:'gwarren@optimaed.com',   name:'Gabe Warren',     role:'Asset',   initials:'GW'},
-  {email:'jolson@optimaed.com',    name:'Jonathan Olson',  role:'SME Lead',initials:'JO'},
-  {email:'rwalker@optimaed.com',   name:'Ryan Walker',     role:'SME',     initials:'RW'},
-  {email:'sdevereaux@optimaed.com',name:'Sarah Devereaux', role:'SME',     initials:'SD'},
-  {email:'jbergel@optimaed.com',   name:'Jessica Bergel',  role:'SME',     initials:'JB'},
-  {email:'hduley@optimaed.com',    name:'Heather Duley',   role:'SME',     initials:'HD'},
-];
-
-function cu(path) {
-  return fetch('https://api.clickup.com/api/v2'+path,{headers:{Authorization:TOKEN}})
-    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
-}
-function msg(s){ document.getElementById('ld-msg').textContent=s; }
-
-// Known folder IDs — hardcoded for reliability (no discovery needed)
-const KNOWN_FOLDER_IDS = [
-  '901318021853', // Phase 0 — Pre-Sprint 0
-  '901318021854', // Phase 1 — Sprint 0 Audit
-  '901318021855', // Phase 2 — Build Sprints 1-7
-  '901318021857', // Phase 3 — QA & Deployment
-  '901318021858', // Milestones & Gates
-];
-
-async function fetchTasks(){
-  msg('Fetching project lists...');
-
-  // Step 1: Get lists from every known folder directly
-  const allLists = [];
-  for(const fid of KNOWN_FOLDER_IDS){
-    try{
-      const r = await cu('/folder/'+fid+'/list?archived=false');
-      const lists = r.lists || [];
-      lists.forEach(l=>{ l._folderId=fid; allLists.push(l); });
-      console.log('Folder '+fid+': '+lists.length+' lists');
-    }catch(e){ console.warn('Failed folder '+fid, e.message); }
-  }
-
-  // Step 2: Also check for any folderless lists in the space
-  try{
-    const r = await cu('/space/'+SPACE_ID+'/list?archived=false');
-    (r.lists||[]).forEach(l=>allLists.push(l));
-  }catch(e){ console.warn('Space list fetch failed', e.message); }
-
-  console.log('Total lists found:', allLists.length, allLists.map(l=>l.name));
-  if(allLists.length === 0) throw new Error('Could not load any lists. Check your API token and that it has access to this workspace.');
-
-  // Step 3: Fetch tasks from every list
-  const tasks = [];
-  const seen = new Set();
-  for(let i=0;i<allLists.length;i++){
-    const l = allLists[i];
-    msg('Loading '+(i+1)+'/'+allLists.length+': '+l.name+'...');
-    let pg = 0;
-    try{
-      while(true){
-        const r = await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=true');
-        // Check if API returned an error object instead of tasks
-        if(r.err || r.error){
-          console.warn('API error for list '+l.id+' ('+l.name+'): ', r.err||r.error);
-          break;
-        }
-        const batch = r.tasks || [];
-        console.log('List '+l.name+' page '+pg+': '+batch.length+' tasks');
-        batch.forEach(t=>{
-          if(!seen.has(t.id)){
-            seen.add(t.id);
-            t._lid = l.id;
-            t._folderId = l._folderId || null;
-            tasks.push(t);
+          function avColor(str) {
+            let h = 0;
+            for (const c of (str||'')) h = (h*31 + c.charCodeAt(0)) % AV_COLORS.length;
+            return AV_COLORS[Math.abs(h) % AV_COLORS.length];
           }
-        });
-        if(batch.length < 100) break;
-        pg++;
-      }
-    }catch(e){ console.warn('Task fetch failed for list '+l.id+' ('+l.name+')', e.message); }
-  }
 
-  console.log('Total tasks fetched:', tasks.length);
-  if(tasks.length === 0){
-    // Build a helpful diagnostic message
-    const listNames = allLists.map(l=>l.name).join(', ');
-    throw new Error(
-      'Lists found ('+allLists.length+') but all task fetches returned 0 tasks.\n\n'+
-      'Most likely cause: your API token does not have access to these lists, '+
-      'or the token has expired.\n\n'+
-      'Lists attempted: '+listNames+'\n\n'+
-      'Try generating a new API token at app.clickup.com/settings/apps'
-    );
-  }
-  return tasks;
-}
+          function get(path) {
+            return new Promise((res, rej) => {
+              const req = https.request(
+                {hostname:'api.clickup.com', path:'/api/v2'+path, headers:{Authorization:TOKEN}},
+                r => { let d=''; r.on('data',c=>d+=c); r.on('end',()=>{ try{res(JSON.parse(d));}catch(e){rej(new Error('Parse:'+d.slice(0,80)));} }); }
+              );
+              req.on('error',rej); req.end();
+            });
+          }
 
-async function init(){
-  ['loading','dashboard','error-screen'].forEach(id=>{
-    document.getElementById(id).style.display=id==='loading'?'flex':'none';
-  });
-  try{
-    allTasks=await fetchTasks();
-    render();
-    document.getElementById('loading').style.display='none';
-    document.getElementById('dashboard').style.display='block';
-    document.getElementById('h-ts').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-  }catch(e){
-    document.getElementById('loading').style.display='none';
-    document.getElementById('error-screen').style.display='flex';
-    document.getElementById('err-d').textContent=e.message;
-  }
-}
+          function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+          function pct(n,d){return d?Math.round(n/d*100):0;}
+          function ss(t){return(t.status&&t.status.status?t.status.status:'').toLowerCase().trim();}
+          function isDone(t){const s=ss(t);return s==='complete'||s==='closed';}
+          function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+          function fmtDate(ts){if(!ts)return'';return new Date(+ts).toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+          function pName(e){return(TEAM_INFO[e]||{name:e.split('@')[0]}).name.split(' ')[0];}
+          function pFull(e){return(TEAM_INFO[e]||{name:e.split('@')[0]}).name;}
+          function pIni(e){return(TEAM_INFO[e]||{initials:'?'}).initials;}
 
-function ss(t){ return(t.status?.status||'').toLowerCase().trim(); }
-function isDone(t){ const s=ss(t); return s==='complete'||s==='closed'; }
-function pct(n,d){ return d?Math.round(n/d*100):0; }
-function set(id,v){ document.getElementById(id).textContent=v; }
+          async function fetchAllTasks() {
+            const allLists=[];
+            for(const fid of KNOWN_FOLDERS){
+              try{const r=await get('/folder/'+fid+'/list?archived=false');(r.lists||[]).forEach(l=>{l._folderId=fid;allLists.push(l);});}catch(e){console.warn('folder '+fid+':'+e.message);}
+            }
+            try{const r=await get('/space/'+SPACE+'/list?archived=false');(r.lists||[]).forEach(l=>allLists.push(l));}catch(e){}
+            console.log('Lists:'+allLists.length);
+            const tasks=[],seen=new Set();
+            for(let i=0;i<allLists.length;i++){
+              const l=allLists[i];
+              console.log('List '+(i+1)+'/'+allLists.length+':'+l.name);
+              let pg=0;
+              while(true){
+                try{
+                  const r=await get('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=true');
+                  const batch=r.tasks||[];
+                  batch.forEach(t=>{if(!seen.has(t.id)){seen.add(t.id);t._lid=l.id;t._folderId=l._folderId||null;tasks.push(t);}});
+                  if(batch.length<100)break;pg++;
+                }catch(e){console.warn('list '+l.id+':'+e.message);break;}
+              }
+              if(i>0&&i%10===0)await sleep(300);
+            }
+            return tasks;
+          }
 
-// ── getWsTasks — defined globally so openWorkstream can call it ──────────
-function getWsTasks(ws) {
-  const wt=[], seen=new Set();
-  const add = t => { if(!seen.has(t.id)){ seen.add(t.id); wt.push(t); } };
-  if(hasWsData && ws.wsKeys) {
-    ws.wsKeys.forEach(key=>{ (wsTaskMap['ws:'+key.trim()]||[]).forEach(add); });
-  } else {
-    ws.listIds.forEach(lid=>{ (wsTaskMap['lid:'+lid]||[]).forEach(add); });
-  }
-  return wt;
-}
+          async function enrichCustomFields(tasks) {
+            const top=tasks.filter(t=>!t.parent);
+            console.log('Enriching '+top.length+' tasks...');
+            let done=0;
+            for(let i=0;i<top.length;i++){
+              const t=top[i];
+              try{
+                const r=await get('/task/'+t.id+'?custom_fields=true');
+                if(r.custom_fields){
+                  const ws=r.custom_fields.find(f=>f.id===WORKSTREAM_FIELD);
+                  if(ws&&ws.value)t._workstream=ws.value.name||ws.value;
+                }
+                done++;
+              }catch(e){}
+              if(i>0&&i%50===0){console.log('Enriched '+done+'/'+top.length);await sleep(600);}
+            }
+            const taskMap={};tasks.forEach(t=>{taskMap[t.id]=t;});
+            tasks.forEach(t=>{if(t.parent&&!t._workstream){const p=taskMap[t.parent];if(p&&p._workstream)t._workstream=p._workstream;}});
+            console.log('Enrichment done');
+          }
 
-// hasWsData is set during render() — needs to be global too
-let hasWsData = false;
+          async function main() {
+            console.log('Starting...');
+            const tasks=await fetchAllTasks();
+            console.log('Total:'+tasks.length);
+            await enrichCustomFields(tasks);
 
-function render(){
-  const now=Date.now();
-  // Use UTC midnight to avoid timezone boundary issues with ClickUp timestamps
-  const now2 = new Date();
-  const today=new Date(now2.getFullYear(), now2.getMonth(), now2.getDate(), 0,0,0,0);
-  const todayTs = today.getTime();
-  const weekEnd=new Date(today); weekEnd.setDate(today.getDate()+7);
-  const weekEndTs = weekEnd.getTime();
+            const now=Date.now();
+            const today=new Date();today.setHours(0,0,0,0);
+            const todayTs=today.getTime();
+            const weekEnd=new Date(today);weekEnd.setDate(today.getDate()+7);
+            const weekEndTs=weekEnd.getTime();
+            const weekStart=new Date(today);weekStart.setDate(today.getDate()-7);
+            const weekStartTs=weekStart.getTime();
+            const month30Start=new Date(today);month30Start.setDate(today.getDate()-30);
+            const month30Ts=month30Start.getTime();
 
-  // Countdown
-  set('cd-n',Math.ceil((RETREAT-now)/86400000));
+            let complete=0,inprogress=0,notstarted=0,atrisk=0,blocked=0,overdue=0;
+            tasks.forEach(t=>{
+              const s=ss(t),d=isDone(t);
+              const dt=+t.due_date||0;
+              const tDt=new Date(dt);tDt.setHours(0,0,0,0);
+              if(d)complete++;
+              else if(s==='in progress')inprogress++;
+              else if(s==='at risk')atrisk++;
+              else if(s==='blocked')blocked++;
+              else notstarted++;
+              if(!d&&dt>0&&tDt.getTime()<todayTs)overdue++;
+            });
+            const total=tasks.length;
+            const completePct=pct(complete,total);
+            const daysToRetreat=Math.ceil((RETREAT-now)/86400000);
 
-  // Status counts
-  const C={complete:0,inprogress:0,notstarted:0,atrisk:0,blocked:0};
-  allTasks.forEach(t=>{
-    const s=ss(t);
-    if(isDone(t)) C.complete++;
-    else if(s==='in progress') C.inprogress++;
-    else if(s==='at risk') C.atrisk++;
-    else if(s==='blocked') C.blocked++;
-    else C.notstarted++;
-  });
-  const total=allTasks.length;
+            const wsMap={};
+            tasks.forEach(t=>{
+              const ws=t._workstream&&typeof t._workstream==='string'?t._workstream.trim():null;
+              if(!ws)return;
+              if(!wsMap[ws])wsMap[ws]={name:ws,complete:0,inprogress:0,notstarted:0,atrisk:0,blocked:0,total:0};
+              const s=ss(t);
+              wsMap[ws].total++;
+              if(isDone(t))wsMap[ws].complete++;
+              else if(s==='in progress')wsMap[ws].inprogress++;
+              else if(s==='at risk')wsMap[ws].atrisk++;
+              else if(s==='blocked')wsMap[ws].blocked++;
+              else wsMap[ws].notstarted++;
+            });
 
-  [['sc','sc-b',C.complete],['si','si-b',C.inprogress],['sn','sn-b',C.notstarted],
-   ['sa','sa-b',C.atrisk],['sb','sb-b',C.blocked]].forEach(([id,bar,val])=>{
-    set(id,val);
-    setTimeout(()=>{ document.getElementById(bar).style.width=pct(val,total)+'%'; },150);
-  });
+            const workstreams=Object.values(wsMap).filter(w=>w.total>0).sort((a,b)=>{
+              const ai=WS_ORDER.indexOf((a.name||'').trim()),bi=WS_ORDER.indexOf((b.name||'').trim());
+              if(ai===-1&&bi===-1)return a.name.localeCompare(b.name);
+              if(ai===-1)return 1;if(bi===-1)return -1;return ai-bi;
+            });
 
-  const cp=pct(C.complete,total);
-  const circ=2*Math.PI*58;
-  setTimeout(()=>{
-    document.getElementById('d-ring').setAttribute('stroke-dasharray',(cp/100)*circ+' '+circ);
-    document.getElementById('d-ring').setAttribute('stroke',
-      C.blocked>5?'var(--red)':C.atrisk>5?'var(--amber)':cp>60?'var(--green)':'var(--gold)');
-  },200);
-  set('d-pct',cp+'%');
-  set('d-health',C.blocked>5?'⚠ Critical — blockers need immediate attention':C.blocked>0?'Active blockers — monitor closely':cp>75?'✓ On track for July 25':cp>30?'In progress — '+C.inprogress+' tasks active':'Getting started');
+            const teamMap={};
+            tasks.forEach(t=>{
+              const d=isDone(t),s=ss(t);
+              const dt=+t.due_date||0;
+              const tDt=new Date(dt);tDt.setHours(0,0,0,0);
+              const isOver=!d&&dt>0&&tDt.getTime()<todayTs;
+              const isDueWeek=!d&&dt>0&&tDt.getTime()>=todayTs&&tDt.getTime()<=weekEndTs;
+              const upd=+t.date_updated||0;
+              const closed=+t.date_closed||0;
+              const workedOn=!d&&upd>=weekStartTs;
+              const completedThisWeek=d&&closed>=weekStartTs;
+              const completedMonth=d&&closed>=month30Ts;
+              (t.assignees||[]).forEach(a=>{
+                const e=a.email||'';
+                if(!teamMap[e])teamMap[e]={open:0,done:0,blocked:0,overdue:0,dueThisWeek:0,inprogress:0,workedOn:0,completedThisWeek:0,completedMonth:0,workedOnTasks:0};
+                if(!d)teamMap[e].open++;
+                if(d)teamMap[e].done++;
+                if(s==='blocked')teamMap[e].blocked++;
+                if(s==='in progress')teamMap[e].inprogress++;
+                if(isOver)teamMap[e].overdue++;
+                if(isDueWeek)teamMap[e].dueThisWeek++;
+                if(workedOn)teamMap[e].workedOn++;
+                if(completedThisWeek)teamMap[e].completedThisWeek++;
+                if(completedMonth)teamMap[e].completedMonth++;
+                if(upd>=weekStartTs)teamMap[e].workedOnTasks++;
+              });
+            });
 
-  // ── WORKSTREAMS — use _workstream field (from GitHub Actions enrichment) ───
-  // _workstream is set by the nightly fetch when custom fields are available
-  // Falls back to list ID mapping for live refresh where custom fields aren't fetched
-  wsTaskMap = {};  // keyed by workstream name AND list ID both
+            const workedThisWeek=Object.entries(teamMap).filter(([e,c])=>c.workedOn>0).sort((a,b)=>b[1].workedOn-a[1].workedOn);
+            const completedByPerson=Object.entries(teamMap).filter(([e,c])=>c.completedThisWeek>0).sort((a,b)=>b[1].completedThisWeek-a[1].completedThisWeek);
+            const openByPerson=Object.entries(teamMap).filter(([e,c])=>c.open>0).sort((a,b)=>b[1].open-a[1].open);
 
-  allTasks.forEach(t => {
-    // Primary: use workstream custom field value if available
-    if(t._workstream) {
-      const key = 'ws:' + t._workstream.trim();
-      if(!wsTaskMap[key]) wsTaskMap[key]=[];
-      wsTaskMap[key].push(t);
-    }
-    // Always also index by list ID for fallback
-    const lkey = 'lid:' + t._lid;
-    if(!wsTaskMap[lkey]) wsTaskMap[lkey]=[];
-    wsTaskMap[lkey].push(t);
-  });
+            const dueThisWeek=tasks.filter(t=>{
+              if(isDone(t))return false;
+              const dt=+t.due_date||0;if(!dt)return false;
+              const tDt=new Date(dt);tDt.setHours(0,0,0,0);
+              return tDt.getTime()<=weekEndTs;
+            }).sort((a,b)=>+a.due_date-+b.due_date).slice(0,30);
 
-  // Determine if we have custom field data available (updates global)
-  hasWsData = allTasks.some(t => t._workstream);
-  console.log('Workstream custom field data available:', hasWsData);
+            const blockedTasks=tasks.filter(t=>ss(t)==='blocked').slice(0,20);
+            const milestones=tasks.filter(t=>/^[\u{1F3C1}\u{1F680}\u{1F393}]/u.test(t.name)).sort((a,b)=>(+a.due_date||0)-(+b.due_date||0));
+            const todayActivity=tasks.filter(t=>(+t.date_updated||0)>=todayTs).sort((a,b)=>(+b.date_updated)-(+a.date_updated)).slice(0,12);
 
-  // Only show workstreams with at least 1 task assigned
-  const activeWorkstreams = WORKSTREAMS.filter(ws => getWsTasks(ws).length > 0);
-  set('ws-sb', activeWorkstreams.length+' active workstreams');
+            const fetchedAt=new Date().toLocaleString('en-US',{timeZone:'America/Chicago',weekday:'long',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
 
-  document.getElementById('ws-grid').innerHTML=activeWorkstreams.map((ws)=>{
-    const origIdx=WORKSTREAMS.indexOf(ws);
-    const unique = getWsTasks(ws);
-    const done=unique.filter(isDone).length;
-    const inp=unique.filter(t=>ss(t)==='in progress').length;
-    const blk=unique.filter(t=>ss(t)==='blocked').length;
-    const ov=unique.filter(t=>!isDone(t)&&+t.due_date>0&&+t.due_date<now).length;
-    const tot=unique.length;
-    const fp=pct(done,tot);
-    let bcls='wb-idle',btxt='Pending';
-    if(blk>0||ov>0){ bcls='wb-bad'; btxt=blk>0?'Blocked':'Overdue'; }
-    else if(inp>0){ bcls='wb-warn'; btxt='Active'; }
-    else if(fp===100){ bcls='wb-good'; btxt='Complete'; }
-    else if(done>0){ bcls='wb-warn'; btxt='In Progress'; }
-    return`<div class="ws-card" style="--wc:${ws.color}; cursor:pointer" onclick="openWorkstream(${origIdx})" title="Click to see tasks">
-      <div class="ws-top">
-        <div class="ws-name">${ws.name}</div>
-        <div class="ws-badge ${bcls}">${btxt}</div>
-      </div>
-      <div class="ws-bar-bg"><div class="ws-bar-fill" style="width:${fp}%"></div></div>
-      <div class="ws-meta">
-        <div class="wm"><b>${fp}%</b> done</div>
-        <div class="wm"><b>${done}/${tot}</b> tasks</div>
-        ${blk>0?`<div class="wm" style="color:var(--red)"><b>${blk}</b> blocked</div>`:''}
-        ${ov>0?`<div class="wm" style="color:var(--amber)"><b>${ov}</b> overdue</div>`:''}
-        ${inp>0&&blk===0&&ov===0?`<div class="wm"><b>${inp}</b> active</div>`:''}
-        <div class="wo">${ws.owner} <span style="color:rgba(238,232,220,0.25);margin-left:4px">›</span></div>
-      </div>
-    </div>`;
-  }).join('');
+            console.log('Rendering...');
+            const html=buildHTML({fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,atrisk,blocked,overdue,workstreams,teamMap,workedThisWeek,completedByPerson,openByPerson,dueThisWeek,blockedTasks,milestones,todayActivity,todayTs,weekStartTs});
 
-  // Blocked
-  const blk=allTasks.filter(t=>ss(t)==='blocked');
-  set('blk-c',blk.length+' blocked');
-  document.getElementById('blk-list').innerHTML=blk.length===0
-    ?'<div class="empty">✓ No blocked tasks</div>'
-    :blk.map(t=>{
-        const who=(t.assignees||[]).map(a=>a.username||a.initials||'?').join(', ');
-        const due=t.due_date?new Date(+t.due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-        return`<div class="bi"><div class="bi-dot"></div><div class="bi-body">
-          <div class="bi-name">${t.name}</div>
-          <div class="bi-row"><div class="bi-who">${who||'Unassigned'}</div>${due?`<div class="bi-due">${due}</div>`:''}</div>
-        </div></div>`;
-      }).join('');
+            fs.writeFileSync('index.html',html);
+            console.log('Done');
+          }
 
-  // Milestones
-  const ms=allTasks.filter(t=>/^[🏁🚀🎓]/.test(t.name)).sort((a,b)=>(+a.due_date||0)-(+b.due_date||0));
-  set('ms-c',ms.length+' gates');
-  document.getElementById('ms-list').innerHTML=ms.length===0?'<div class="empty">No milestones</div>'
-    :ms.map(t=>{
-        const d=isDone(t),dt=+t.due_date||0,ov=!d&&dt>0&&dt<now;
-        const ds=dt?new Date(dt).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-        const cls=d?'done':ov?'over':'';
-        const icon=d?'✓':ov?'⚠':'◇';
-        const badge=d?'<span class="mi-badge mb-done">Done</span>':ov?'<span class="mi-badge mb-over">Overdue</span>':'<span class="mi-badge mb-up">Upcoming</span>';
-        return`<div class="mi ${cls}"><div class="mi-icon">${icon}</div><div class="mi-name ${d?'done':''}">${t.name}</div><div class="mi-date">${ds}</div>${badge}</div>`;
-      }).join('');
+          function buildPieChart(segments, cx, cy, r) {
+            if(!segments||segments.length===0)return'';
+            const total=segments.reduce((s,sg)=>s+sg.value,0);
+            if(total===0)return'';
+            let angle=-Math.PI/2;
+            const paths=[];
+            segments.forEach(sg=>{
+              const sweep=2*Math.PI*(sg.value/total);
+              const x1=cx+r*Math.cos(angle);
+              const y1=cy+r*Math.sin(angle);
+              const x2=cx+r*Math.cos(angle+sweep);
+              const y2=cy+r*Math.sin(angle+sweep);
+              const large=sweep>Math.PI?1:0;
+              paths.push('<path d="M '+cx+' '+cy+' L '+x1.toFixed(1)+' '+y1.toFixed(1)+' A '+r+' '+r+' 0 '+large+' 1 '+x2.toFixed(1)+' '+y2.toFixed(1)+' Z" fill="'+sg.color+'"/>');
+              angle+=sweep;
+            });
+            return paths.join('');
+          }
 
-  // ── DUE THIS WEEK ──────────────────────────────────────────────────────────
-  const weekTasks = allTasks
-    .filter(t=>{
-      if(isDone(t)) return false;
-      if(!t.due_date) return false;
-      const dt=new Date(+t.due_date); dt.setHours(0,0,0,0);
-      return dt<=weekEnd;
-    })
-    .sort((a,b)=>+a.due_date - +b.due_date);
+          function buildDonutChart(segments, cx, cy, r, innerR) {
+            if(!segments||segments.length===0)return'';
+            const total=segments.reduce((s,sg)=>s+sg.value,0);
+            if(total===0)return'';
+            let angle=-Math.PI/2;
+            const paths=[];
+            segments.forEach(sg=>{
+              const sweep=2*Math.PI*(sg.value/total);
+              const x1o=cx+r*Math.cos(angle),y1o=cy+r*Math.sin(angle);
+              const x2o=cx+r*Math.cos(angle+sweep),y2o=cy+r*Math.sin(angle+sweep);
+              const x1i=cx+innerR*Math.cos(angle+sweep),y1i=cy+innerR*Math.sin(angle+sweep);
+              const x2i=cx+innerR*Math.cos(angle),y2i=cy+innerR*Math.sin(angle);
+              const large=sweep>Math.PI?1:0;
+              paths.push('<path d="M '+x1o.toFixed(1)+' '+y1o.toFixed(1)+' A '+r+' '+r+' 0 '+large+' 1 '+x2o.toFixed(1)+' '+y2o.toFixed(1)+' L '+x1i.toFixed(1)+' '+y1i.toFixed(1)+' A '+innerR+' '+innerR+' 0 '+large+' 0 '+x2i.toFixed(1)+' '+y2i.toFixed(1)+' Z" fill="'+sg.color+'"/>');
+              angle+=sweep;
+            });
+            return paths.join('');
+          }
 
-  set('week-c', weekTasks.length+' tasks');
+          function buildHTML(d) {
+            const {fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,atrisk,blocked,overdue,workstreams,teamMap,workedThisWeek,completedByPerson,openByPerson,dueThisWeek,blockedTasks,milestones,todayActivity,todayTs,weekStartTs}=d;
 
-  document.getElementById('week-grid').innerHTML = weekTasks.length===0
-    ?'<div class="empty">✓ Nothing due in the next 7 days</div>'
-    :weekTasks.map(t=>{
-        const dt=new Date(+t.due_date);
-        const dayNum=dt.getDate();
-        const mon=dt.toLocaleDateString('en-US',{month:'short'});
-        const dtDay=new Date(dt); dtDay.setHours(0,0,0,0);
-        const isOverdue=dtDay.getTime() < todayTs;
-        const isToday=dtDay.getTime()===todayTs;
-        const cls=isOverdue?'overdue':isToday?'today':'';
-        const tag=isOverdue?'<span class="dw-tag dt-overdue">Overdue</span>':isToday?'<span class="dw-tag dt-today">Today</span>':'<span class="dw-tag dt-soon">This week</span>';
-        const who=(t.assignees||[]).map(a=>a.username||a.initials||'?').join(', ');
-        return`<div class="dw-card ${cls}">
-          <div class="dw-date"><div class="dw-day">${dayNum}</div><div class="dw-mon">${mon}</div></div>
-          <div class="dw-body">
-            <div class="dw-name">${t.name}</div>
-            <div class="dw-meta"><div class="dw-who">${who||'Unassigned'}</div>${tag}</div>
-          </div>
-        </div>`;
-      }).join('');
+            // Workload by status donut
+            const statusSegs=[
+              {label:'Not Started',value:notstarted,color:'#87878f'},
+              {label:'In Progress',value:inprogress,color:'#7c6fcd'},
+              {label:'At Risk',value:atrisk,color:'#f0a030'},
+              {label:'Blocked',value:blocked,color:'#e05050'},
+              {label:'Closed',value:complete,color:'#6bc97e'},
+            ].filter(s=>s.value>0);
 
-  // ── TEAM HEALTH TABLE ──────────────────────────────────────────────────────
-  const mm={};
-  allTasks.forEach(t=>{
-    const d=isDone(t), bl=ss(t)==='blocked', ip=ss(t)==='in progress';
-    const dt=+t.due_date||0;
-    const taskDt=new Date(dt); taskDt.setHours(0,0,0,0);
-    // A task is overdue if its due date (start of that day) is before today's start
-    const isOverdue=!d && dt>0 && taskDt.getTime() < todayTs;
-    const isDueThisWeek=!d && dt>0 && taskDt.getTime()>=todayTs && taskDt.getTime()<=weekEndTs;
-    (t.assignees||[]).forEach(a=>{
-      const e=a.email||'';
-      if(!mm[e]) mm[e]={done:0,inprogress:0,blocked:0,overdue:0,dueThisWeek:0,total:0};
-      if(!d) mm[e].total++;
-      if(d) mm[e].done++;
-      if(ip) mm[e].inprogress++;
-      if(bl) mm[e].blocked++;
-      if(isOverdue) mm[e].overdue++;
-      if(isDueThisWeek) mm[e].dueThisWeek++;
-    });
-  });
+            const donutSVG='<svg width="180" height="180" viewBox="0 0 180 180">'
+              +buildDonutChart(statusSegs,90,90,80,45)
+              +'<text x="90" y="86" text-anchor="middle" fill="#fff" font-size="22" font-weight="bold" font-family="sans-serif">'+completePct+'%</text>'
+              +'<text x="90" y="104" text-anchor="middle" fill="#aaa" font-size="11" font-family="sans-serif">complete</text>'
+              +'</svg>';
 
-  document.getElementById('team-tbody').innerHTML = TEAM.map(m=>{
-    const c=mm[m.email]||{done:0,inprogress:0,blocked:0,overdue:0,dueThisWeek:0,total:0};
+            // Priority breakdown bar chart
+            const priorityCounts={urgent:0,high:0,normal:0,low:0,none:0};
+            // tasks is not in scope here but we compute from counts passed
+            // We'll use a simple bar based on status instead for now
 
-    // Health signal — only flag genuine problems
-    // ⚠ Needs attention = 2+ overdue OR 2+ blocked
-    // → Monitor       = 1+ overdue OR 1+ blocked (something is actually stuck)
-    // ✓ Moving        = has in-progress tasks, zero overdue, zero blocked
-    // · Queued        = assigned but nothing in progress yet (normal at project start)
-    // — No tasks      = nothing assigned yet
-    // NOTE: dueThisWeek is NOT a health signal — having upcoming work is normal
-    let hcls='hp-idle', htxt='No tasks', hicon='—';
-    const hasWork = c.total>0 || c.done>0;
-    if(hasWork){
-      if(c.overdue>=2 || c.blocked>=2){
-        hcls='hp-bad'; htxt='Needs attention'; hicon='⚠';
-      } else if(c.overdue>=1 || c.blocked>=1){
-        hcls='hp-warn'; htxt='Monitor'; hicon='→';
-      } else if(c.inprogress>0){
-        hcls='hp-good'; htxt='Moving'; hicon='✓';
-      } else if(c.done>0 && c.inprogress===0 && c.total===0){
-        hcls='hp-good'; htxt='Up to date'; hicon='✓';
-      } else {
-        hcls='hp-idle'; htxt='Queued'; hicon='·';
-      }
-    }
+            // Open tasks by person - pie
+            const personSegs=openByPerson.slice(0,8).map(([e,c])=>({label:pName(e),value:c.open,color:avColor(pIni(e))}));
+            const personPieSVG='<svg width="200" height="200" viewBox="0 0 200 200">'
+              +buildPieChart(personSegs,100,100,95)
+              +'</svg>';
 
-    const num=(v,cls='')=>v>0?`<div class="tm-num" style="${cls?'color:'+cls:''}">${v}</div>`:`<div class="tm-zero">—</div>`;
+            // Progress bar segments
+            const progW=completePct;
+            const ipW=pct(inprogress,total);
+            const atW=pct(atrisk,total);
+            const blW=pct(blocked,total);
+            const nsW=Math.max(0,100-progW-ipW-atW-blW);
 
-    return`<tr>
-      <td>
-        <div class="tm-person">
-          <div class="tm-av">${m.initials}</div>
-          <div><div class="tm-name">${m.name}</div><div class="tm-role">${m.role}</div></div>
-        </div>
-      </td>
-      <td style="text-align:center"><span class="health-pill ${hcls}">${hicon} ${htxt}</span></td>
-      <td>${num(c.overdue,'var(--red)')}</td>
-      <td>${num(c.blocked,'var(--amber)')}</td>
-      <td>${num(c.dueThisWeek)}</td>
-      <td>${num(c.inprogress,'var(--blue)')}</td>
-      <td>${num(c.done,'var(--green)')}</td>
-    </tr>`;
-  }).join('');
-}
+            // Workstream rows
+            const wsRowsHTML=workstreams.map(ws=>{
+              const cp=pct(ws.complete,ws.total);
+              const ip=pct(ws.inprogress,ws.total);
+              const ap=pct(ws.atrisk,ws.total);
+              const bp=pct(ws.blocked,ws.total);
+              const np=Math.max(0,100-cp-ip-ap-bp);
+              return '<div class="ws-row">'
+                +'<div class="ws-name" title="'+esc(ws.name||'')+'">'+esc(ws.name||'')+'</div>'
+                +'<div class="ws-bar-wrap">'
+                +(ws.complete>0?'<div class="ws-seg" style="width:'+cp+'%;background:#6bc97e"></div>':'')
+                +(ws.inprogress>0?'<div class="ws-seg" style="width:'+ip+'%;background:#7c6fcd"></div>':'')
+                +(ws.atrisk>0?'<div class="ws-seg" style="width:'+ap+'%;background:#f0a030"></div>':'')
+                +(ws.blocked>0?'<div class="ws-seg" style="width:'+bp+'%;background:#e05050"></div>':'')
+                +(np>0?'<div class="ws-seg" style="width:'+np+'%;background:#2a2a3a"></div>':'')
+                +'</div>'
+                +'<div class="ws-right">'+ws.complete+'/'+ws.total+' <span class="ws-pct">'+cp+'%</span></div>'
+                +'</div>';
+            }).join('');
 
-// ── WORKSTREAM DRILL-DOWN ────────────────────────────────────────────────
-let wsTasksCache = {};
+            // Due this week
+            const dueHTML=dueThisWeek.length===0?'<div class="empty-msg">No tasks due this week</div>'
+              :dueThisWeek.map(t=>{
+                const dt=new Date(+t.due_date);
+                const dtDay=new Date(dt);dtDay.setHours(0,0,0,0);
+                const isOver=dtDay.getTime()<todayTs;
+                const isToday=dtDay.getTime()===todayTs;
+                const who=(t.assignees||[]).map(a=>pName(a.email||'')).filter(Boolean).slice(0,2).join(', ');
+                const s=ss(t);
+                const statusDot=isOver?'<span class="sdot overdue"></span>':s==='in progress'?'<span class="sdot inprog"></span>':'<span class="sdot ns"></span>';
+                return '<div class="due-item">'
+                  +statusDot
+                  +'<div class="due-body">'
+                  +'<div class="due-name">'+esc(t.name)+'</div>'
+                  +'<div class="due-meta">'+esc(who)+(isOver?' <span class="tag-over">Overdue</span>':isToday?' <span class="tag-today">Today</span>':'')+'</div>'
+                  +'</div>'
+                  +'<div class="due-date-col">'+(isOver?'<span style="color:#e05050">':'')+fmtDate(t.due_date)+(isOver?'</span>':'')+'</div>'
+                  +'</div>';
+              }).join('');
 
-function openWorkstream(wsIdx) {
-  const ws = WORKSTREAMS[wsIdx];
-  if(!ws) return;
+            // Worked this week
+            const workedHTML=workedThisWeek.slice(0,8).map(([e,c])=>{
+              const col=avColor(pIni(e));
+              return '<div class="person-row">'
+                +'<div class="p-av" style="background:'+col+'">'+pIni(e)+'</div>'
+                +'<div class="p-name">'+esc(pFull(e))+'</div>'
+                +'<div class="p-val">'+c.workedOn+'</div>'
+                +'</div>';
+            }).join('')||'<div class="empty-msg">No activity this week</div>';
 
-  // Collect tasks for this workstream
-  const wt = [];
-  const unique = getWsTasks(ws);
+            // Completed this week
+            const completedHTML=completedByPerson.slice(0,8).map(([e,c])=>{
+              const col=avColor(pIni(e));
+              return '<div class="person-row">'
+                +'<div class="p-av" style="background:'+col+'">'+pIni(e)+'</div>'
+                +'<div class="p-name">'+esc(pFull(e))+'</div>'
+                +'<div class="p-val green">'+c.completedThisWeek+'</div>'
+                +'</div>';
+            }).join('')||'<div class="empty-msg">Nothing completed this week</div>';
 
-  const now = Date.now();
-  const today = new Date(); today.setHours(0,0,0,0);
+            // Activity
+            const actHTML=todayActivity.length===0?'<div class="empty-msg">No activity today</div>'
+              :todayActivity.map(t=>{
+                const d2=isDone(t);
+                const s2=ss(t);
+                const who=(t.assignees||[]).map(a=>pFull(a.email||'')).filter(Boolean).slice(0,1).join('');
+                const statusLabel=d2?'<span class="badge-closed">Closed</span>':s2==='in progress'?'<span class="badge-prog">In Progress</span>':'';
+                return '<div class="act-item">'
+                  +(d2?'<span class="sdot closed-dot"></span>':s2==='in progress'?'<span class="sdot prog-dot"></span>':'<span class="sdot ns-dot"></span>')
+                  +'<div class="act-body">'
+                  +'<div class="act-name">'+esc(t.name)+'</div>'
+                  +'<div class="act-meta">'+esc(who)+' '+statusLabel+'</div>'
+                  +'</div>'
+                  +'</div>';
+              }).join('');
 
-  // Group by status priority
-  const groups = [
-    { key:'blocked',    label:'Blocked',     color:'#DC4E4E', tasks:[] },
-    { key:'overdue',    label:'Overdue',      color:'#E09828', tasks:[] },
-    { key:'in progress',label:'In Progress',  color:'#3A9CE4', tasks:[] },
-    { key:'at risk',    label:'At Risk',      color:'#E09828', tasks:[] },
-    { key:'done',       label:'Complete',     color:'#27B97C', tasks:[] },
-    { key:'not started',label:'Not Started',  color:'#5A7A9A', tasks:[] },
-  ];
+            // Productivity table (30 days)
+            const prodRows=TEAM_LIST.map(m=>{
+              const c=teamMap[m.email]||{completedMonth:0,workedOnTasks:0};
+              const total30=c.completedMonth+c.workedOnTasks;
+              return '<tr>'
+                +'<td><div class="t-person"><div class="t-av" style="background:'+avColor(m.initials)+'">'+m.initials+'</div><span>'+m.name+'</span></div></td>'
+                +'<td class="tc">'+c.completedMonth+'</td>'
+                +'<td class="tc">'+c.workedOnTasks+'</td>'
+                +'<td class="tc bold">'+total30+'</td>'
+                +'</tr>';
+            }).join('');
 
-  unique.forEach(t => {
-    const s = ss(t);
-    const d = isDone(t);
-    const taskDt = t.due_date ? new Date(+t.due_date) : null;
-    if(taskDt) taskDt.setHours(0,0,0,0);
-    const isOver = !d && taskDt && taskDt < today;
+            // Blocked
+            const blkHTML=blockedTasks.length===0?'<div class="empty-msg" style="color:#6bc97e">No blocked tasks</div>'
+              :blockedTasks.map(t=>{
+                const who=(t.assignees||[]).map(a=>pFull(a.email||'')).filter(Boolean).slice(0,2).join(', ');
+                return '<div class="blk-item">'
+                  +'<div class="blk-dot"></div>'
+                  +'<div><div class="blk-name">'+esc(t.name)+'</div>'
+                  +(who?'<div class="blk-who">'+esc(who)+'</div>':'')
+                  +'</div></div>';
+              }).join('');
 
-    if(d) groups.find(g=>g.key==='done').tasks.push(t);
-    else if(s==='blocked') groups.find(g=>g.key==='blocked').tasks.push(t);
-    else if(isOver) groups.find(g=>g.key==='overdue').tasks.push(t);
-    else if(s==='in progress') groups.find(g=>g.key==='in progress').tasks.push(t);
-    else if(s==='at risk') groups.find(g=>g.key==='at risk').tasks.push(t);
-    else groups.find(g=>g.key==='not started').tasks.push(t);
-  });
+            // Milestones
+            const msHTML=milestones.length===0?'<div class="empty-msg">No milestones</div>'
+              :milestones.map(t=>{
+                const d2=isDone(t);
+                const dt=+t.due_date||0;
+                const tDt=new Date(dt);tDt.setHours(0,0,0,0);
+                const over=!d2&&dt>0&&tDt.getTime()<todayTs;
+                const cls=d2?'ms-done':over?'ms-over':'';
+                const badge=d2?'<span class="badge-closed">Done</span>':over?'<span class="badge-over">Overdue</span>':'<span class="badge-up">Upcoming</span>';
+                return '<div class="ms-item '+cls+'">'
+                  +'<span class="ms-icon">'+(d2?'✓':over?'⚠':'◇')+'</span>'
+                  +'<span class="ms-name'+(d2?' done-text':'')+'">'+esc(t.name)+'</span>'
+                  +(dt?'<span class="ms-date">'+fmtDate(dt)+'</span>':'')
+                  +badge+'</div>';
+              }).join('');
 
-  // Render panel header
-  document.getElementById('ws-panel-stripe').style.background = ws.color;
-  document.getElementById('ws-panel-title').textContent = ws.name;
-  document.getElementById('ws-panel-sub').textContent =
-    ws.owner + ' · ' + unique.length + ' tasks · ' +
-    groups.find(g=>g.key==='done').tasks.length + ' complete';
+            return '<!DOCTYPE html>\n<html lang="en">\n<head>\n'
+              +'<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
+              +'<title>Project F.I.N.E. Leadership Dashboard</title>\n'
+              +'<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
+              +'<style>'+getCSS()+'</style>\n'
+              +'</head>\n<body>\n'
+              +getBody({fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,overdue,blocked,progW,ipW,atW,blW,nsW,donutSVG,personPieSVG,wsRowsHTML,dueHTML,workedHTML,completedHTML,actHTML,prodRows,blkHTML,msHTML,wsCount:workstreams.length,dueCount:dueThisWeek.length,blkCount:blockedTasks.length,msCount:milestones.length,statusSegs,openByPerson})
+              +'\n</body>\n</html>';
+          }
 
-  // Render groups
-  const body = document.getElementById('ws-panel-body');
-  body.innerHTML = groups.map((g,gi) => {
-    if(g.tasks.length === 0) return '';
-    const isNotStarted = g.key === 'not started';
-    const startCollapsed = isNotStarted && g.tasks.length > 5;
+          function getCSS(){
+            return '*{margin:0;padding:0;box-sizing:border-box;}'
+              +'body{font-family:Inter,sans-serif;background:#1a1a2e;color:#e0e0e0;min-height:100vh;font-size:13px;}'
+              +'.header{background:#13131f;border-bottom:1px solid #2a2a3a;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}'
+              +'.h-left{display:flex;align-items:center;gap:12px;}'
+              +'.h-brand{font-size:14px;font-weight:700;color:#fff;}'
+              +'.h-sep{color:#444;}'
+              +'.h-title{font-size:13px;color:#888;}'
+              +'.h-ts{font-size:11px;color:#555;}'
+              +'.main{padding:20px 24px;max-width:1400px;margin:0 auto;}'
+              +'.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}'
+              +'.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}'
+              +'.row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:16px;}'
+              +'.card{background:#13131f;border:1px solid #2a2a3a;border-radius:8px;padding:18px;}'
+              +'.card-title{font-size:12px;font-weight:600;color:#aaa;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}'
+              +'.card-title span{background:#2a2a3a;color:#888;font-size:10px;padding:2px 8px;border-radius:12px;text-transform:none;letter-spacing:0;}'
+              +'.big-num{font-size:42px;font-weight:700;color:#fff;line-height:1;margin-bottom:4px;}'
+              +'.big-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.08em;}'
+              +'.countdown-num{font-size:64px;font-weight:700;color:#f0c040;line-height:1;text-align:center;}'
+              +'.countdown-label{text-align:center;font-size:11px;color:#888;letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;}'
+              +'.countdown-sub{text-align:center;font-size:12px;color:#bbb;margin-top:6px;font-weight:600;}'
+              +'.countdown-date{text-align:center;font-size:10px;color:#555;margin-top:2px;}'
+              +'.prog-bar-bg{height:8px;background:#2a2a3a;border-radius:4px;overflow:hidden;margin:12px 0 8px;display:flex;}'
+              +'.prog-seg{height:100%;}'
+              +'.prog-legend{display:flex;flex-wrap:wrap;gap:10px;}'
+              +'.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#aaa;}'
+              +'.ld{width:8px;height:8px;border-radius:50%;flex-shrink:0;}'
+              +'.chart-row{display:flex;align-items:center;gap:16px;}'
+              +'.chart-legend{flex:1;display:flex;flex-direction:column;gap:8px;}'
+              +'.cl-item{display:flex;align-items:center;justify-content:space-between;gap:8px;}'
+              +'.cl-dot-name{display:flex;align-items:center;gap:8px;}'
+              +'.cl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}'
+              +'.cl-name{font-size:12px;color:#ccc;}'
+              +'.cl-pct{font-size:12px;color:#888;font-weight:600;}'
+              +'.ws-chart{display:flex;flex-direction:column;gap:7px;}'
+              +'.ws-row{display:flex;align-items:center;gap:10px;}'
+              +'.ws-name{font-size:11px;color:#ccc;flex:0 0 150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+              +'.ws-bar-wrap{flex:1;height:18px;border-radius:3px;overflow:hidden;display:flex;background:#2a2a3a;}'
+              +'.ws-seg{height:100%;}'
+              +'.ws-right{font-size:10px;color:#888;flex:0 0 70px;text-align:right;white-space:nowrap;}'
+              +'.ws-pct{color:#f0c040;font-weight:600;margin-left:4px;}'
+              +'.person-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e1e2e;}'
+              +'.person-row:last-child{border-bottom:none;}'
+              +'.p-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}'
+              +'.p-name{flex:1;font-size:12px;color:#ccc;}'
+              +'.p-val{font-size:18px;font-weight:700;color:#aaa;}'
+              +'.p-val.green{color:#6bc97e;}'
+              +'.due-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #1e1e2e;}'
+              +'.due-item:last-child{border-bottom:none;}'
+              +'.due-body{flex:1;}'
+              +'.due-name{font-size:12px;color:#ccc;font-weight:500;margin-bottom:3px;}'
+              +'.due-meta{font-size:11px;color:#666;display:flex;align-items:center;gap:6px;}'
+              +'.due-date-col{font-size:11px;color:#888;white-space:nowrap;}'
+              +'.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}'
+              +'.sdot.overdue,.sdot.ns-dot{background:#87878f;}'
+              +'.sdot.inprog,.sdot.prog-dot{background:#7c6fcd;}'
+              +'.sdot.ns{background:#87878f;}'
+              +'.sdot.closed-dot{background:#6bc97e;}'
+              +'.tag-over{background:#4a1a1a;color:#e05050;font-size:10px;padding:1px 5px;border-radius:3px;}'
+              +'.tag-today{background:#3a2a00;color:#f0a030;font-size:10px;padding:1px 5px;border-radius:3px;}'
+              +'.act-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #1e1e2e;}'
+              +'.act-item:last-child{border-bottom:none;}'
+              +'.act-body{flex:1;}'
+              +'.act-name{font-size:12px;color:#ccc;font-weight:500;margin-bottom:3px;line-height:1.4;}'
+              +'.act-meta{font-size:11px;color:#666;display:flex;align-items:center;gap:6px;}'
+              +'.badge-closed{background:#1a3a1a;color:#6bc97e;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:600;}'
+              +'.badge-prog{background:#1e1a3a;color:#7c6fcd;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:600;}'
+              +'.badge-over{background:#3a1a1a;color:#e05050;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:600;}'
+              +'.badge-up{background:#2a2a1a;color:#f0c040;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:600;}'
+              +'.blk-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #1e1e2e;}'
+              +'.blk-item:last-child{border-bottom:none;}'
+              +'.blk-dot{width:8px;height:8px;border-radius:50%;background:#e05050;flex-shrink:0;margin-top:3px;}'
+              +'.blk-name{font-size:12px;color:#ccc;font-weight:500;}'
+              +'.blk-who{font-size:11px;color:#666;}'
+              +'.ms-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;margin-bottom:6px;background:#1e1e2e;}'
+              +'.ms-item.ms-done{background:#1a2a1a;}'
+              +'.ms-item.ms-over{background:#2a1a1a;}'
+              +'.ms-icon{font-size:12px;flex-shrink:0;color:#888;}'
+              +'.ms-name{flex:1;font-size:12px;color:#ccc;font-weight:500;}'
+              +'.ms-name.done-text{color:#555;text-decoration:line-through;}'
+              +'.ms-date{font-size:11px;color:#666;flex-shrink:0;}'
+              +'.team-table{width:100%;border-collapse:collapse;}'
+              +'.team-table th{font-size:11px;color:#666;font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid #2a2a3a;text-transform:uppercase;letter-spacing:0.05em;}'
+              +'.team-table th.tc{text-align:center;}'
+              +'.team-table td{padding:10px;border-bottom:1px solid #1e1e2e;}'
+              +'.team-table tr:last-child td{border-bottom:none;}'
+              +'.team-table tr:hover td{background:#1e1e2e;}'
+              +'.t-person{display:flex;align-items:center;gap:10px;}'
+              +'.t-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}'
+              +'.tc{text-align:center;color:#aaa;}'
+              +'.bold{font-weight:700;color:#fff;}'
+              +'.pie-legend{display:flex;flex-direction:column;gap:6px;flex:1;}'
+              +'.empty-msg{color:#555;font-size:12px;padding:16px 0;text-align:center;}'
+              +'.mb16{margin-bottom:16px;}';
+          }
 
-    const taskHtml = g.tasks.map(t => {
-      const d = isDone(t);
-      const s = ss(t);
-      const who = (t.assignees||[]).map(a=>a.username||a.initials||'?').slice(0,2).join(', ');
-      const taskDt = t.due_date ? new Date(+t.due_date) : null;
-      if(taskDt) taskDt.setHours(0,0,0,0);
-      const isOver = !d && taskDt && taskDt < today;
-      const dueStr = taskDt ? taskDt.toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-      const cls = d?'done':s==='blocked'?'blocked':isOver?'overdue':'';
-      return `<div class="ws-task ${cls}">
-        <div class="ws-task-dot" style="background:${g.color}"></div>
-        <div class="ws-task-body">
-          <div class="ws-task-name ${d?'done':''}">${t.name}</div>
-          <div class="ws-task-meta">
-            ${who?`<div class="ws-task-who">${who}</div>`:''}
-            ${dueStr?`<div class="ws-task-due ${isOver?'overdue':'upcoming'}">${isOver?'⚠ ':''}${dueStr}</div>`:''}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
+          function getBody(d){
+            const {fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,overdue,blocked,progW,ipW,atW,blW,nsW,donutSVG,personPieSVG,wsRowsHTML,dueHTML,workedHTML,completedHTML,actHTML,prodRows,blkHTML,msHTML,wsCount,dueCount,blkCount,msCount,statusSegs,openByPerson}=d;
 
-    return `<div class="ws-group">
-      <div class="ws-group-hdr" onclick="toggleGroup(this)">
-        <div class="ws-group-dot" style="background:${g.color}"></div>
-        <div class="ws-group-name">${g.label}</div>
-        <div class="ws-group-count">${g.tasks.length}</div>
-        <div class="ws-group-toggle ${startCollapsed?'collapsed':''}">▾</div>
-      </div>
-      <div class="ws-task-list ${startCollapsed?'collapsed':''}">${taskHtml}</div>
-    </div>`;
-  }).join('');
+            const pieLegend=openByPerson.slice(0,8).map(([e,c])=>{
+              const col=avColor(pIni(e));
+              return '<div class="cl-item">'
+                +'<div class="cl-dot-name"><div class="cl-dot" style="background:'+col+'"></div>'
+                +'<div class="cl-name">'+esc(pFull(e))+'</div></div>'
+                +'<div class="cl-pct">'+c.open+'</div>'
+                +'</div>';
+            }).join('');
 
-  if(!body.innerHTML.trim()) body.innerHTML = '<div class="empty">No tasks assigned to this workstream yet</div>';
+            const statusLegend=statusSegs.map(s=>'<div class="legend-item"><div class="ld" style="background:'+s.color+'"></div>'+s.label+' '+s.value+'</div>').join('');
 
-  document.getElementById('ws-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
+            return '<div class="header">'
+              +'<div class="h-left"><div class="h-brand">Project F.I.N.E.</div>'
+              +'<span class="h-sep">|</span>'
+              +'<div class="h-title">Leadership Dashboard</div></div>'
+              +'<div class="h-ts">Data as of '+fetchedAt+'</div>'
+              +'</div>\n'
+              +'<div class="main">\n'
 
-function closeWorkstream(e) {
-  if(e && e.target !== document.getElementById('ws-overlay')) return;
-  document.getElementById('ws-overlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
+              // Row 1: 3 stat cards + countdown
+              +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 180px;gap:16px;margin-bottom:16px;">'
+              +'<div class="card"><div class="big-num">'+total-complete+'</div><div class="big-label">Open Tasks</div></div>'
+              +'<div class="card"><div class="big-num" style="color:#e05050">'+overdue+'</div><div class="big-label">Overdue Tasks</div></div>'
+              +'<div class="card"><div class="big-num">'+total+'</div><div class="big-label">Total Tasks</div></div>'
+              +'<div class="card" style="background:linear-gradient(135deg,#1a1a2e,#13131f);">'
+              +'<div class="countdown-num">'+daysToRetreat+'</div>'
+              +'<div class="countdown-label">days to retreat</div>'
+              +'<div class="countdown-sub">Teacher Training</div>'
+              +'<div class="countdown-date">July 28&#8211;31, 2026</div>'
+              +'</div>'
+              +'</div>\n'
 
-function toggleGroup(hdr) {
-  const list = hdr.nextElementSibling;
-  const toggle = hdr.querySelector('.ws-group-toggle');
-  list.classList.toggle('collapsed');
-  toggle.classList.toggle('collapsed');
-}
+              // Row 2: progress bar full width
+              +'<div class="card mb16">'
+              +'<div class="card-title">Overall Progress Towards Completion</div>'
+              +'<div class="prog-bar-bg">'
+              +(progW>0?'<div class="prog-seg" style="width:'+progW+'%;background:#6bc97e"></div>':'')
+              +(ipW>0?'<div class="prog-seg" style="width:'+ipW+'%;background:#7c6fcd"></div>':'')
+              +(atW>0?'<div class="prog-seg" style="width:'+atW+'%;background:#f0a030"></div>':'')
+              +(blW>0?'<div class="prog-seg" style="width:'+blW+'%;background:#e05050"></div>':'')
+              +(nsW>0?'<div class="prog-seg" style="width:'+nsW+'%;background:#2a2a3a"></div>':'')
+              +'</div>'
+              +'<div style="display:flex;justify-content:space-between;margin-bottom:8px;">'
+              +'<div style="font-size:12px;color:#aaa;">0</div>'
+              +'<div style="font-size:12px;font-weight:600;color:#f0c040;">'+completePct+'% Complete ('+complete+'/'+total+' tasks)</div>'
+              +'<div style="font-size:12px;color:#aaa;">100</div>'
+              +'</div>'
+              +'<div class="prog-legend">'+statusLegend+'</div>'
+              +'</div>\n'
 
-// expose wsTaskMap globally so openWorkstream can use it
-let wsTaskMap = {};
+              // Row 3: workload donut + open by assignee pie
+              +'<div class="row2">'
+              +'<div class="card">'
+              +'<div class="card-title">Workload by Status</div>'
+              +'<div class="chart-row">'
+              +donutSVG
+              +'<div class="chart-legend">'
+              +statusSegs.map(s=>'<div class="cl-item"><div class="cl-dot-name"><div class="cl-dot" style="background:'+s.color+'"></div><div class="cl-name">'+s.label+'</div></div><div class="cl-pct">'+s.value+'</div></div>').join('')
+              +'</div></div></div>'
+              +'<div class="card">'
+              +'<div class="card-title">Open Tasks by Assignee</div>'
+              +'<div class="chart-row">'
+              +personPieSVG
+              +'<div class="pie-legend">'+pieLegend+'</div>'
+              +'</div></div>'
+              +'</div>\n'
 
-// ── LIVE REFRESH — triggers GitHub Action then reloads data.json ─────────
-// This ensures Live and overnight cache always use identical data (same fetch logic)
-async function liveRefresh(){
-  const btn = document.getElementById('btn-live');
-  btn.disabled = true;
-  btn.textContent = '⚡ Triggering...';
+              // Row 4: workstream progress full width
+              +'<div class="card mb16">'
+              +'<div class="card-title">Workstream Progress <span>'+wsCount+' active</span></div>'
+              +'<div class="ws-chart">'+wsRowsHTML+'</div>'
+              +'<div class="prog-legend" style="margin-top:12px;">'
+              +'<div class="legend-item"><div class="ld" style="background:#6bc97e"></div>Closed</div>'
+              +'<div class="legend-item"><div class="ld" style="background:#7c6fcd"></div>In Progress</div>'
+              +'<div class="legend-item"><div class="ld" style="background:#f0a030"></div>At Risk</div>'
+              +'<div class="legend-item"><div class="ld" style="background:#e05050"></div>Blocked</div>'
+              +'<div class="legend-item"><div class="ld" style="background:#2a2a3a"></div>Not Started</div>'
+              +'</div></div>\n'
 
-  try {
-    // Step 1: Trigger the GitHub Actions workflow
-    const triggerResp = await fetch(
-      'https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/actions/workflows/'+GITHUB_WORKFLOW+'/dispatches',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + GITHUB_TOKEN,
-          'Accept': 'application/vnd.github+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ref: 'main' })
-      }
-    );
+              // Row 5: due this week full width
+              +'<div class="card mb16">'
+              +'<div class="card-title">Tasks Due This Week <span>'+dueCount+' tasks</span></div>'
+              +dueHTML
+              +'</div>\n'
 
-    if (!triggerResp.ok) {
-      const err = await triggerResp.text();
-      throw new Error('GitHub trigger failed ('+triggerResp.status+'): ' + err);
-    }
+              // Row 6: worked / completed / activity
+              +'<div class="row3">'
+              +'<div class="card"><div class="card-title">Worked On This Week</div>'+workedHTML+'</div>'
+              +'<div class="card"><div class="card-title">Completed This Week</div>'+completedHTML+'</div>'
+              +'<div class="card"><div class="card-title">Latest Activity</div>'+actHTML+'</div>'
+              +'</div>\n'
 
-    // Step 2: Poll for the workflow run to complete
-    btn.textContent = '⚡ Running...';
-    document.getElementById('h-ts').textContent = 'Refresh triggered — fetching data...';
+              // Row 7: blocked + milestones
+              +'<div class="row2">'
+              +'<div class="card"><div class="card-title">Blocked Tasks <span>'+blkCount+'</span></div>'+blkHTML+'</div>'
+              +'<div class="card"><div class="card-title">Milestones &amp; Gates <span>'+msCount+'</span></div>'+msHTML+'</div>'
+              +'</div>\n'
 
-    // Wait for workflow to start (GitHub needs a few seconds)
-    await new Promise(r => setTimeout(r, 5000));
+              // Row 8: productivity table
+              +'<div class="card mb16">'
+              +'<div class="card-title">Productivity &#8212; Last 30 Days</div>'
+              +'<table class="team-table"><thead><tr>'
+              +'<th>Team Member</th><th class="tc">Tasks Completed</th><th class="tc">Worked On</th><th class="tc">Total Points</th>'
+              +'</tr></thead><tbody>'+prodRows+'</tbody></table>'
+              +'</div>\n'
 
-    // Poll until complete (max 3 minutes)
-    const startTime = Date.now();
-    const maxWait = 3 * 60 * 1000;
-    let runId = null;
+              +'</div>';
+          }
 
-    while (Date.now() - startTime < maxWait) {
-      const runsResp = await fetch(
-        'https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/actions/workflows/'+GITHUB_WORKFLOW+'/runs?per_page=1',
-        { headers: { 'Authorization': 'Bearer '+GITHUB_TOKEN, 'Accept': 'application/vnd.github+json' } }
-      );
-      const runsData = await runsResp.json();
-      const run = runsData.workflow_runs?.[0];
+          main().catch(e=>{console.error('FAILED:',e.message);process.exit(1);});
+          JSEOF
 
-      if (!run) { await new Promise(r => setTimeout(r, 5000)); continue; }
+      - name: Run build script
+        env:
+          CLICKUP_TOKEN: ${{ secrets.CLICKUP_TOKEN }}
+          SPACE_ID: '901313746539'
+        run: node build.js
 
-      runId = run.id;
-      const elapsed = Math.round((Date.now() - startTime) / 1000);
-      btn.textContent = '⚡ ' + elapsed + 's...';
-
-      if (run.status === 'completed') {
-        if (run.conclusion !== 'success') {
-          throw new Error('Workflow completed but failed. Check GitHub Actions for details.');
-        }
-        break; // Success — exit poll loop
-      }
-
-      await new Promise(r => setTimeout(r, 6000)); // Poll every 6 seconds
-    }
-
-    if (Date.now() - startTime >= maxWait) {
-      throw new Error('Workflow is taking longer than expected. Try refreshing manually in a minute.');
-    }
-
-    // Step 3: Wait a moment for GitHub Pages to update, then reload data.json
-    await new Promise(r => setTimeout(r, 3000));
-    btn.textContent = '⚡ Loading...';
-    await init(); // Reload the dashboard from fresh data.json
-
-  } catch(e) {
-    alert('Live refresh failed: ' + e.message);
-    btn.disabled = false;
-    btn.textContent = '⚡ Live';
-  }
-}
-
-window.addEventListener('load',init);
-</script>
-</body>
-</html>
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet || git commit -m "chore: refresh dashboard $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
