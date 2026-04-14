@@ -52,6 +52,9 @@ body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(-
 .h-ts { font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(238,232,220,.22); }
 .btn-r { background:rgba(212,168,71,.06); border:1px solid rgba(212,168,71,.14); border-radius:6px; padding:5px 13px; font-size:11px; color:var(--gold); cursor:pointer; transition:background .15s; }
 .btn-r:hover { background:rgba(212,168,71,.13); }
+.btn-live { background:rgba(42,188,176,.07); border:1px solid rgba(42,188,176,.2); border-radius:6px; padding:5px 13px; font-size:11px; color:#2ABCB0; cursor:pointer; transition:background .15s; font-family:'IBM Plex Sans',sans-serif; font-weight:500; }
+.btn-live:hover { background:rgba(42,188,176,.14); }
+.btn-live:disabled { opacity:.4; cursor:not-allowed; }
 
 .main { padding:28px 44px; max-width:1480px; margin:0 auto; }
 
@@ -318,6 +321,7 @@ var SPACE_ID = '901313746539';
     <div class="hr2">
       <div class="h-ts" id="h-ts"></div>
       <button class="btn-r" onclick="init()">↻ Refresh</button>
+      <button class="btn-live" id="btn-live" onclick="liveRefresh()">⚡ Live</button>
     </div>
   </div>
 
@@ -432,25 +436,29 @@ const RETREAT = new Date('2026-07-28');
 // WORKSTREAM_FIELD_ID — the ClickUp custom field ID for the Workstream dropdown
 const WORKSTREAM_FIELD_ID = 'bde6b5f2-d0e0-4fe5-98d8-0ebf7d6c76b4';
 
-// Workstreams defined by their custom field option IDs from ClickUp
-// optionIds must match the dropdown option IDs from the Workstream custom field
+// Workstreams in project flow order — Phase 0 first, then build phases, then deployment
+// Only workstreams with at least 1 task will be shown on the dashboard
 const WORKSTREAMS = [
-  { name:'Platform Integration',    owner:'Dylan Overby',    color:'#FF4081', optionIds:['dd2b27dc-1807-4197-9bb2-80dc39f00679'] },
+  // Phase 0 — active now
+  { name:'ENGAGE Documentation',    owner:'SMEs + Heather',  color:'#0f5096', optionIds:['a0b0e5ad-54c1-42de-8e18-82b2abb770de'] },
+  { name:'Asset Migration',         owner:'Sydney + Gabe',   color:'#D4A847', optionIds:['36f88d98-ce47-441d-ab63-e15e384be73e'] },
+  { name:'Project Oversight',       owner:'Tina + Vince',    color:'#0091ff', optionIds:['e1ed3449-50cc-4c06-97d8-e5bcbc22703e'] },
+  // Phase 1 — Sprint 0 Audit
   { name:'Sprint 0 Audit',          owner:'Dylan + Team',    color:'#6647f0', optionIds:['4805e7e1-ee52-46c4-a722-c4ca972cf2be'] },
   { name:'AI Avatars',              owner:'Jay Stiles',      color:'#2ABCB0', optionIds:['8cc148af-f85e-41c0-aa22-71f7f02da348'] },
-  { name:'Asset Migration',         owner:'Sydney + Gabe',   color:'#D4A847', optionIds:['36f88d98-ce47-441d-ab63-e15e384be73e'] },
+  // Phase 2 — Build (in sprint order)
+  { name:'Platform Integration',    owner:'Dylan Overby',    color:'#FF4081', optionIds:['dd2b27dc-1807-4197-9bb2-80dc39f00679'] },
+  { name:'K-12 Account Model',      owner:'Dylan Overby',    color:'#8dcec3', optionIds:['82b9f6a5-3bd4-448a-8518-9a7f2297d9f3'] },
+  { name:'Forms System',            owner:'Dylan Overby',    color:'#7C4DFF', optionIds:['f1064da5-0dfd-407f-b9fe-33f59f60e702'] },
+  { name:'Canvas LTI',              owner:'Dylan Overby',    color:'#b6b6ff', optionIds:['7927abc1-51ef-4e6f-b377-3a6b4277cdea'] },
+  { name:'COPPA/FERPA',             owner:'Tina + Dylan',    color:'#96c7f2', optionIds:['2d93cf84-e22d-4c21-a534-727fbacdde29'] },
   { name:'Education Environments',  owner:'Asset Team',      color:'#E09828', optionIds:['39f0ccf5-b29c-4977-b537-bbc3d3f1217f'] },
   { name:'Experience & ILE',        owner:'SMEs + Heather',  color:'#ffaa7d', optionIds:['8650597e-2888-4d54-98ec-0bf9546d74eb'] },
-  { name:'Canvas LTI',              owner:'Dylan Overby',    color:'#b6b6ff', optionIds:['7927abc1-51ef-4e6f-b377-3a6b4277cdea'] },
-  { name:'Forms System',            owner:'Dylan Overby',    color:'#7C4DFF', optionIds:['f1064da5-0dfd-407f-b9fe-33f59f60e702'] },
-  { name:'K-12 Account Model',      owner:'Dylan Overby',    color:'#8dcec3', optionIds:['82b9f6a5-3bd4-448a-8518-9a7f2297d9f3'] },
-  { name:'COPPA/FERPA',             owner:'Tina + Dylan',    color:'#96c7f2', optionIds:['2d93cf84-e22d-4c21-a534-727fbacdde29'] },
   { name:'Web Companion',           owner:'Dylan Overby',    color:'#3e63dd', optionIds:['d0e07e0e-188e-459d-acd6-0ac37a6a7923'] },
-  { name:'Analytics Layer',         owner:'Dylan + Tina',    color:'#30a46c', optionIds:['36ce420f-8bd6-45ed-996c-6a01fcc9cd19'] },
   { name:'Media Library',           owner:'Asset Team',      color:'#ab4aba', optionIds:['a28bc058-9665-45c3-84a5-3e33d0de6f92'] },
+  { name:'Analytics Layer',         owner:'Dylan + Tina',    color:'#30a46c', optionIds:['36ce420f-8bd6-45ed-996c-6a01fcc9cd19'] },
+  // Phase 3 — Training & Deployment (last)
   { name:'Training',                owner:'SMEs + Tina',     color:'#1bfa0d', optionIds:['21bbcbd0-c6bf-4f99-a994-b666bdb3650c'] },
-  { name:'ENGAGE Documentation',    owner:'SMEs + Heather',  color:'#0f5096', optionIds:['a0b0e5ad-54c1-42de-8e18-82b2abb770de'] },
-  { name:'Project Oversight',       owner:'Tina + Vince',    color:'#0091ff', optionIds:['e1ed3449-50cc-4c06-97d8-e5bcbc22703e'] },
 ];
 
 const TEAM = [
@@ -517,7 +525,7 @@ async function fetchTasks(){
     let pg=0;
     try {
       while(true){
-        const r = await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=false');
+        const r = await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=true&custom_fields=true');
         const batch = r.tasks || [];
         batch.forEach(t=>{
           if(!seen.has(t.id)){
@@ -613,9 +621,16 @@ function render(){
     }
   });
 
-  set('ws-sb',WORKSTREAMS.length+' workstreams');
+  // Only show workstreams with at least 1 task assigned
+  const activeWorkstreams = WORKSTREAMS.filter(ws => {
+    const wt=[];
+    ws.optionIds.forEach(oid=>{ (wsTaskMap[oid]||[]).forEach(t=>wt.push(t)); });
+    return wt.length>0;
+  });
+  set('ws-sb', activeWorkstreams.length+' active workstreams');
 
-  document.getElementById('ws-grid').innerHTML=WORKSTREAMS.map((ws,wsIdx)=>{
+  document.getElementById('ws-grid').innerHTML=activeWorkstreams.map((ws)=>{
+    const origIdx=WORKSTREAMS.indexOf(ws);
     const wt=[];
     ws.optionIds.forEach(oid=>{ (wsTaskMap[oid]||[]).forEach(t=>wt.push(t)); });
     // deduplicate
@@ -631,7 +646,7 @@ function render(){
     else if(inp>0){ bcls='wb-warn'; btxt='Active'; }
     else if(fp===100){ bcls='wb-good'; btxt='Complete'; }
     else if(done>0){ bcls='wb-warn'; btxt='In Progress'; }
-    return`<div class="ws-card" style="--wc:${ws.color}; cursor:pointer" onclick="openWorkstream(${wsIdx})" title="Click to see tasks">
+    return`<div class="ws-card" style="--wc:${ws.color}; cursor:pointer" onclick="openWorkstream(${origIdx})" title="Click to see tasks">
       <div class="ws-top">
         <div class="ws-name">${ws.name}</div>
         <div class="ws-badge ${bcls}">${btxt}</div>
@@ -882,6 +897,60 @@ function toggleGroup(hdr) {
 
 // expose wsTaskMap globally so openWorkstream can use it
 let wsTaskMap = {};
+
+// ── LIVE REFRESH ─────────────────────────────────────────────────────────
+function cuLive(path) {
+  return fetch('https://api.clickup.com/api/v2'+path,{headers:{Authorization:TOKEN}})
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+}
+
+async function liveRefresh(){
+  const btn=document.getElementById('btn-live');
+  btn.disabled=true; btn.textContent='⚡ Loading...';
+  document.getElementById('loading').style.display='flex';
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('ld-msg').textContent='Fetching live data from ClickUp...';
+  try{
+    let folders=[];
+    try{ const r=await cuLive('/space/'+SPACE_ID+'/folder?archived=false'); folders=r.folders||[]; }catch(e){}
+    let spaceLists=[];
+    try{ const r=await cuLive('/space/'+SPACE_ID+'/list?archived=false'); spaceLists=r.lists||[]; }catch(e){}
+    const folderLists=[];
+    for(const f of folders){
+      try{
+        const r=await cuLive('/folder/'+f.id+'/list?archived=false');
+        (r.lists||[]).forEach(l=>{ l._folderId=f.id; folderLists.push(l); });
+      }catch(e){}
+    }
+    const allLists=[...spaceLists,...folderLists];
+    if(allLists.length===0) throw new Error('No lists found.');
+    const tasks=[]; const seen=new Set();
+    for(let i=0;i<allLists.length;i++){
+      const l=allLists[i];
+      document.getElementById('ld-msg').textContent='Live: '+(i+1)+'/'+allLists.length+': '+l.name+'...';
+      let pg=0;
+      try{
+        while(true){
+          const r=await cuLive('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=true&custom_fields=true');
+          (r.tasks||[]).forEach(t=>{ if(!seen.has(t.id)){ seen.add(t.id); t._lid=l.id; tasks.push(t); } });
+          if((r.tasks||[]).length<100) break;
+          pg++;
+        }
+      }catch(e){}
+    }
+    if(tasks.length===0) throw new Error('No tasks returned.');
+    allTasks=tasks;
+    render();
+    document.getElementById('loading').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    document.getElementById('h-ts').textContent='⚡ Live — '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    alert('Live refresh failed: '+e.message);
+  }
+  btn.disabled=false; btn.textContent='⚡ Live';
+}
 
 window.addEventListener('load',init);
 </script>
