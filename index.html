@@ -52,9 +52,6 @@ body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(-
 .h-ts { font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(238,232,220,.22); }
 .btn-r { background:rgba(212,168,71,.06); border:1px solid rgba(212,168,71,.14); border-radius:6px; padding:5px 13px; font-size:11px; color:var(--gold); cursor:pointer; transition:background .15s; }
 .btn-r:hover { background:rgba(212,168,71,.13); }
-.btn-live { background:rgba(42,188,176,.07); border:1px solid rgba(42,188,176,.2); border-radius:6px; padding:5px 13px; font-size:11px; color:#2ABCB0; cursor:pointer; transition:background .15s; font-family:'IBM Plex Sans',sans-serif; font-weight:500; }
-.btn-live:hover { background:rgba(42,188,176,.14); }
-.btn-live:disabled { opacity:.4; cursor:not-allowed; }
 
 .main { padding:28px 44px; max-width:1480px; margin:0 auto; }
 
@@ -207,14 +204,93 @@ body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(-
 .dt-soon { background:rgba(58,156,228,.1); color:var(--blue); }
 
 .empty { text-align:center; padding:28px; color:rgba(238,232,220,.18); font-size:12px; }
+
+/* ── WORKSTREAM DRILL-DOWN PANEL ─────────────────────────── */
+.ws-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:200;
+  display:none; align-items:flex-start; justify-content:flex-end;
+  backdrop-filter:blur(4px);
+}
+.ws-overlay.open { display:flex; }
+
+.ws-panel {
+  background:var(--s1); border-left:1px solid var(--border);
+  width:520px; max-width:92vw; height:100vh;
+  display:flex; flex-direction:column;
+  animation:slideIn .2s ease;
+}
+@keyframes slideIn { from { transform:translateX(40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+
+.ws-panel-hdr {
+  padding:20px 24px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:12px; flex-shrink:0;
+}
+.ws-panel-stripe { width:4px; height:32px; border-radius:2px; flex-shrink:0; }
+.ws-panel-info { flex:1; }
+.ws-panel-title { font-family:'Playfair Display',serif; font-size:18px; color:var(--cream); }
+.ws-panel-sub { font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; margin-top:2px; }
+.ws-panel-close {
+  width:28px; height:28px; border-radius:6px;
+  background:rgba(255,255,255,.05); border:1px solid var(--border);
+  color:var(--muted); cursor:pointer; font-size:16px;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .15s; flex-shrink:0;
+}
+.ws-panel-close:hover { background:rgba(255,255,255,.1); color:var(--cream); }
+
+.ws-panel-body { flex:1; overflow-y:auto; padding:20px 24px; }
+.ws-panel-body::-webkit-scrollbar { width:4px; }
+.ws-panel-body::-webkit-scrollbar-track { background:transparent; }
+.ws-panel-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:2px; }
+
+/* status groups inside panel */
+.ws-group { margin-bottom:20px; }
+.ws-group-hdr {
+  display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  cursor:pointer; user-select:none;
+}
+.ws-group-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.ws-group-name { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+.ws-group-count { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); margin-left:auto; }
+.ws-group-toggle { font-size:10px; color:var(--muted); margin-left:4px; transition:transform .15s; }
+.ws-group-toggle.collapsed { transform:rotate(-90deg); }
+
+.ws-task-list { display:flex; flex-direction:column; gap:6px; }
+.ws-task-list.collapsed { display:none; }
+
+.ws-task {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:10px 12px;
+  background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.04);
+  border-radius:7px; transition:background .15s;
+}
+.ws-task:hover { background:rgba(255,255,255,.04); }
+.ws-task.blocked { background:rgba(220,78,78,.05); border-color:rgba(220,78,78,.12); }
+.ws-task.overdue { background:rgba(224,152,40,.05); border-color:rgba(224,152,40,.1); }
+.ws-task.done { opacity:.45; }
+
+.ws-task-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+.ws-task-body { flex:1; min-width:0; }
+.ws-task-name { font-size:12px; font-weight:500; color:var(--cream); line-height:1.4; margin-bottom:3px; }
+.ws-task-name.done { text-decoration:line-through; color:var(--muted); }
+.ws-task-meta { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.ws-task-who { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); }
+.ws-task-due { font-family:'IBM Plex Mono',monospace; font-size:10px; }
+.ws-task-due.overdue { color:var(--red); background:rgba(220,78,78,.1); padding:1px 5px; border-radius:3px; }
+.ws-task-due.upcoming { color:var(--muted); }
+
+.ws-notstarted-toggle {
+  display:flex; align-items:center; gap:8px; padding:9px 12px;
+  background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.04);
+  border-radius:7px; cursor:pointer; transition:background .15s;
+  font-size:11px; color:var(--muted); margin-top:4px;
+}
+.ws-notstarted-toggle:hover { background:rgba(255,255,255,.04); }
 </style>
 </head>
 <body>
 
 <script>
-// Data is pre-fetched nightly by GitHub Actions and stored in data.json
-var DATA_URL = 'data.json';
-// Token is only used for the live refresh button — keep this file internal
 var TOKEN = 'pk_156056280_LDRARAWGYSYL46GQE85BE7HZ66U0DKXV';
 var SPACE_ID = '901313746539';
 </script>
@@ -223,11 +299,11 @@ var SPACE_ID = '901313746539';
   <div class="ld-brand">Optima ED</div>
   <div class="ld-title">Project F.I.N.E.</div>
   <div class="spinner"></div>
-  <div class="ld-msg" id="ld-msg">Loading dashboard data...</div>
+  <div class="ld-msg" id="ld-msg">Connecting to ClickUp...</div>
 </div>
 
 <div id="error-screen">
-  <div class="err-t">Could not load data</div>
+  <div class="err-t">Connection failed</div>
   <div class="err-m" id="err-d">Could not load dashboard data.</div>
   <button class="retry" onclick="location.reload()">Try again</button>
 </div>
@@ -242,7 +318,6 @@ var SPACE_ID = '901313746539';
     <div class="hr2">
       <div class="h-ts" id="h-ts"></div>
       <button class="btn-r" onclick="init()">↻ Refresh</button>
-      <button class="btn-live" id="btn-live" onclick="liveRefresh()">⚡ Live</button>
     </div>
   </div>
 
@@ -336,19 +411,46 @@ var SPACE_ID = '901313746539';
   </div>
 </div>
 
+<!-- WORKSTREAM DRILL-DOWN OVERLAY -->
+<div class="ws-overlay" id="ws-overlay" onclick="closeWorkstream(event)">
+  <div class="ws-panel" id="ws-panel">
+    <div class="ws-panel-hdr">
+      <div class="ws-panel-stripe" id="ws-panel-stripe"></div>
+      <div class="ws-panel-info">
+        <div class="ws-panel-title" id="ws-panel-title">Workstream</div>
+        <div class="ws-panel-sub" id="ws-panel-sub"></div>
+      </div>
+      <div class="ws-panel-close" onclick="closeWorkstream(null)">✕</div>
+    </div>
+    <div class="ws-panel-body" id="ws-panel-body"></div>
+  </div>
+</div>
+
 <script>
 const RETREAT = new Date('2026-07-28');
 
+// WORKSTREAM_FIELD_ID — the ClickUp custom field ID for the Workstream dropdown
+const WORKSTREAM_FIELD_ID = 'bde6b5f2-d0e0-4fe5-98d8-0ebf7d6c76b4';
+
+// Workstreams defined by their custom field option IDs from ClickUp
+// optionIds must match the dropdown option IDs from the Workstream custom field
 const WORKSTREAMS = [
-  { name:'Platform Build',           owner:'Dylan Overby',   color:'#3A9CE4', listIds:['901326821499','901326821500','901326821501','901326821502','901326821503','901326821504','901326821505'] },
-  { name:'Sprint 0 Codebase Audit',  owner:'Dylan + Team',   color:'#8B70E6', listIds:['901326821485','901326821486','901326821487','901326821488','901326821489','901326821490','901326821491','901326821492','901326821493','901326821496','901326821498'] },
-  { name:'AI Avatars',               owner:'Jay Stiles',     color:'#2ABCB0', listIds:['901326821501'] },
-  { name:'Asset Migration',          owner:'Sydney + Gabe',  color:'#D4A847', listIds:['901326821482','901326821483'] },
-  { name:'Education Environments',   owner:'Asset Team',     color:'#E09828', listIds:['901326821502'] },
-  { name:'Teacher Training',         owner:'SMEs + Tina',    color:'#27B97C', listIds:['901326821507','901326821509'] },
-  { name:'Canvas LTI & Forms',       owner:'Dylan Overby',   color:'#DC4E4E', listIds:['901326821500'] },
-  { name:'QA & Deployment',          owner:'Dylan + Tina',   color:'#F0C96A', listIds:['901326821506','901326821508'] },
-  { name:'ENGAGE Documentation',     owner:'SMEs + Heather', color:'#8B70E6', listIds:['901326821482'] },
+  { name:'Platform Integration',    owner:'Dylan Overby',    color:'#FF4081', optionIds:['dd2b27dc-1807-4197-9bb2-80dc39f00679'] },
+  { name:'Sprint 0 Audit',          owner:'Dylan + Team',    color:'#6647f0', optionIds:['4805e7e1-ee52-46c4-a722-c4ca972cf2be'] },
+  { name:'AI Avatars',              owner:'Jay Stiles',      color:'#2ABCB0', optionIds:['8cc148af-f85e-41c0-aa22-71f7f02da348'] },
+  { name:'Asset Migration',         owner:'Sydney + Gabe',   color:'#D4A847', optionIds:['36f88d98-ce47-441d-ab63-e15e384be73e'] },
+  { name:'Education Environments',  owner:'Asset Team',      color:'#E09828', optionIds:['39f0ccf5-b29c-4977-b537-bbc3d3f1217f'] },
+  { name:'Experience & ILE',        owner:'SMEs + Heather',  color:'#ffaa7d', optionIds:['8650597e-2888-4d54-98ec-0bf9546d74eb'] },
+  { name:'Canvas LTI',              owner:'Dylan Overby',    color:'#b6b6ff', optionIds:['7927abc1-51ef-4e6f-b377-3a6b4277cdea'] },
+  { name:'Forms System',            owner:'Dylan Overby',    color:'#7C4DFF', optionIds:['f1064da5-0dfd-407f-b9fe-33f59f60e702'] },
+  { name:'K-12 Account Model',      owner:'Dylan Overby',    color:'#8dcec3', optionIds:['82b9f6a5-3bd4-448a-8518-9a7f2297d9f3'] },
+  { name:'COPPA/FERPA',             owner:'Tina + Dylan',    color:'#96c7f2', optionIds:['2d93cf84-e22d-4c21-a534-727fbacdde29'] },
+  { name:'Web Companion',           owner:'Dylan Overby',    color:'#3e63dd', optionIds:['d0e07e0e-188e-459d-acd6-0ac37a6a7923'] },
+  { name:'Analytics Layer',         owner:'Dylan + Tina',    color:'#30a46c', optionIds:['36ce420f-8bd6-45ed-996c-6a01fcc9cd19'] },
+  { name:'Media Library',           owner:'Asset Team',      color:'#ab4aba', optionIds:['a28bc058-9665-45c3-84a5-3e33d0de6f92'] },
+  { name:'Training',                owner:'SMEs + Tina',     color:'#1bfa0d', optionIds:['21bbcbd0-c6bf-4f99-a994-b666bdb3650c'] },
+  { name:'ENGAGE Documentation',    owner:'SMEs + Heather',  color:'#0f5096', optionIds:['a0b0e5ad-54c1-42de-8e18-82b2abb770de'] },
+  { name:'Project Oversight',       owner:'Tina + Vince',    color:'#0091ff', optionIds:['e1ed3449-50cc-4c06-97d8-e5bcbc22703e'] },
 ];
 
 const TEAM = [
@@ -367,7 +469,73 @@ const TEAM = [
   {email:'hduley@optimaed.com',    name:'Heather Duley',   role:'SME',     initials:'HD'},
 ];
 
+function cu(path) {
+  return fetch('https://api.clickup.com/api/v2'+path,{headers:{Authorization:TOKEN}})
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+}
 function msg(s){ document.getElementById('ld-msg').textContent=s; }
+
+async function fetchTasks(){
+  msg('Fetching project structure...');
+
+  // Step 1: get folders
+  let folders = [];
+  try {
+    const r = await cu('/space/'+SPACE_ID+'/folder?archived=false');
+    folders = r.folders || [];
+  } catch(e) { console.warn('folder fetch failed', e); }
+
+  // Step 2: get folderless lists
+  let spaceLists = [];
+  try {
+    const r = await cu('/space/'+SPACE_ID+'/list?archived=false');
+    spaceLists = r.lists || [];
+  } catch(e) { console.warn('space list fetch failed', e); }
+
+  // Step 3: get lists inside each folder
+  const folderLists = [];
+  for(const f of folders){
+    try {
+      const r = await cu('/folder/'+f.id+'/list?archived=false');
+      const lists = r.lists || [];
+      lists.forEach(l=>{ l._folderId=f.id; });
+      folderLists.push(...lists);
+    } catch(e) { console.warn('folder list fetch failed for', f.id, e); }
+  }
+
+  const allLists = [...spaceLists, ...folderLists];
+  console.log('Total lists found:', allLists.length, allLists.map(l=>l.name));
+
+  if(allLists.length === 0) throw new Error('No lists found in space '+SPACE_ID+'. Check your Space ID and token.');
+
+  // Step 4: fetch tasks from every list
+  const tasks = [];
+  const seen = new Set();
+  for(let i=0;i<allLists.length;i++){
+    const l=allLists[i];
+    msg('Loading '+(i+1)+'/'+allLists.length+': '+l.name+'...');
+    let pg=0;
+    try {
+      while(true){
+        const r = await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=false');
+        const batch = r.tasks || [];
+        batch.forEach(t=>{
+          if(!seen.has(t.id)){
+            seen.add(t.id);
+            t._lid=l.id;
+            tasks.push(t);
+          }
+        });
+        if(batch.length<100) break;
+        pg++;
+      }
+    } catch(e) { console.warn('task fetch failed for list', l.id, e); }
+  }
+
+  console.log('Total tasks fetched:', tasks.length);
+  if(tasks.length === 0) throw new Error('No tasks found. Verify your API token has access to Space '+SPACE_ID);
+  return tasks;
+}
 
 let allTasks=[];
 
@@ -376,22 +544,11 @@ async function init(){
     document.getElementById(id).style.display=id==='loading'?'flex':'none';
   });
   try{
-    msg('Loading dashboard data...');
-    const r = await fetch(DATA_URL + '?t=' + Date.now());
-    if(!r.ok) throw new Error('Could not load data.json — HTTP '+r.status+'. Has the GitHub Action run yet?');
-    const payload = await r.json();
-    allTasks = payload.tasks || [];
-    if(allTasks.length === 0) throw new Error('data.json loaded but contains no tasks. Check the GitHub Action log.');
-
+    allTasks=await fetchTasks();
     render();
     document.getElementById('loading').style.display='none';
     document.getElementById('dashboard').style.display='block';
-
-    // Show when data was last fetched by the GitHub Action
-    const fetchedAt = new Date(payload.fetchedAt);
-    const timeStr = fetchedAt.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' +
-                    fetchedAt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('h-ts').textContent='Data from '+timeStr;
+    document.getElementById('h-ts').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
   }catch(e){
     document.getElementById('loading').style.display='none';
     document.getElementById('error-screen').style.display='flex';
@@ -444,26 +601,37 @@ function render(){
   set('d-pct',cp+'%');
   set('d-health',C.blocked>5?'⚠ Critical — blockers need immediate attention':C.blocked>0?'Active blockers — monitor closely':cp>75?'✓ On track for July 25':cp>30?'In progress — '+C.inprogress+' tasks active':'Getting started');
 
-  // Workstreams
-  const ltm={};
-  allTasks.forEach(t=>{ if(!ltm[t._lid]) ltm[t._lid]=[]; ltm[t._lid].push(t); });
+  // ── WORKSTREAMS — read from custom field ─────────────────────────────────
+  // Build lookup: workstream optionId → tasks (populate global so openWorkstream can use it)
+  wsTaskMap = {};
+  allTasks.forEach(t => {
+    const wsField = (t.custom_fields||[]).find(f=>f.id===WORKSTREAM_FIELD_ID);
+    if(wsField && wsField.value) {
+      const optId = wsField.value.id || wsField.value;
+      if(!wsTaskMap[optId]) wsTaskMap[optId]=[];
+      wsTaskMap[optId].push(t);
+    }
+  });
+
   set('ws-sb',WORKSTREAMS.length+' workstreams');
 
-  document.getElementById('ws-grid').innerHTML=WORKSTREAMS.map(ws=>{
-    const wt=[]; const seen=new Set();
-    ws.listIds.forEach(lid=>{ (ltm[lid]||[]).forEach(t=>{ if(!seen.has(t.id)){ seen.add(t.id); wt.push(t); } }); });
-    const done=wt.filter(isDone).length;
-    const inp=wt.filter(t=>ss(t)==='in progress').length;
-    const blk=wt.filter(t=>ss(t)==='blocked').length;
-    const ov=wt.filter(t=>!isDone(t)&&+t.due_date>0&&+t.due_date<now).length;
-    const tot=wt.length;
+  document.getElementById('ws-grid').innerHTML=WORKSTREAMS.map((ws,wsIdx)=>{
+    const wt=[];
+    ws.optionIds.forEach(oid=>{ (wsTaskMap[oid]||[]).forEach(t=>wt.push(t)); });
+    // deduplicate
+    const seen=new Set(); const unique=wt.filter(t=>seen.has(t.id)?false:(seen.add(t.id),true));
+    const done=unique.filter(isDone).length;
+    const inp=unique.filter(t=>ss(t)==='in progress').length;
+    const blk=unique.filter(t=>ss(t)==='blocked').length;
+    const ov=unique.filter(t=>!isDone(t)&&+t.due_date>0&&+t.due_date<now).length;
+    const tot=unique.length;
     const fp=pct(done,tot);
     let bcls='wb-idle',btxt='Pending';
     if(blk>0||ov>0){ bcls='wb-bad'; btxt=blk>0?'Blocked':'Overdue'; }
     else if(inp>0){ bcls='wb-warn'; btxt='Active'; }
     else if(fp===100){ bcls='wb-good'; btxt='Complete'; }
     else if(done>0){ bcls='wb-warn'; btxt='In Progress'; }
-    return`<div class="ws-card" style="--wc:${ws.color}">
+    return`<div class="ws-card" style="--wc:${ws.color}; cursor:pointer" onclick="openWorkstream(${wsIdx})" title="Click to see tasks">
       <div class="ws-top">
         <div class="ws-name">${ws.name}</div>
         <div class="ws-badge ${bcls}">${btxt}</div>
@@ -475,7 +643,7 @@ function render(){
         ${blk>0?`<div class="wm" style="color:var(--red)"><b>${blk}</b> blocked</div>`:''}
         ${ov>0?`<div class="wm" style="color:var(--amber)"><b>${ov}</b> overdue</div>`:''}
         ${inp>0&&blk===0&&ov===0?`<div class="wm"><b>${inp}</b> active</div>`:''}
-        <div class="wo">${ws.owner}</div>
+        <div class="wo">${ws.owner} <span style="color:rgba(238,232,220,0.25);margin-left:4px">›</span></div>
       </div>
     </div>`;
   }).join('');
@@ -606,70 +774,114 @@ function render(){
   }).join('');
 }
 
-// ── LIVE REFRESH — bypasses cache, hits ClickUp API directly ──────────────
-function cu(path) {
-  return fetch('https://api.clickup.com/api/v2'+path,{headers:{Authorization:TOKEN}})
-    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+// ── WORKSTREAM DRILL-DOWN ────────────────────────────────────────────────
+let wsTasksCache = {};
+
+function openWorkstream(wsIdx) {
+  const ws = WORKSTREAMS[wsIdx];
+  if(!ws) return;
+
+  // Collect tasks for this workstream
+  const wt = [];
+  ws.optionIds.forEach(oid => { (wsTaskMap[oid]||[]).forEach(t=>wt.push(t)); });
+  const seen = new Set();
+  const unique = wt.filter(t=>seen.has(t.id)?false:(seen.add(t.id),true));
+
+  const now = Date.now();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Group by status priority
+  const groups = [
+    { key:'blocked',    label:'Blocked',     color:'#DC4E4E', tasks:[] },
+    { key:'overdue',    label:'Overdue',      color:'#E09828', tasks:[] },
+    { key:'in progress',label:'In Progress',  color:'#3A9CE4', tasks:[] },
+    { key:'at risk',    label:'At Risk',      color:'#E09828', tasks:[] },
+    { key:'done',       label:'Complete',     color:'#27B97C', tasks:[] },
+    { key:'not started',label:'Not Started',  color:'#5A7A9A', tasks:[] },
+  ];
+
+  unique.forEach(t => {
+    const s = ss(t);
+    const d = isDone(t);
+    const taskDt = t.due_date ? new Date(+t.due_date) : null;
+    if(taskDt) taskDt.setHours(0,0,0,0);
+    const isOver = !d && taskDt && taskDt < today;
+
+    if(d) groups.find(g=>g.key==='done').tasks.push(t);
+    else if(s==='blocked') groups.find(g=>g.key==='blocked').tasks.push(t);
+    else if(isOver) groups.find(g=>g.key==='overdue').tasks.push(t);
+    else if(s==='in progress') groups.find(g=>g.key==='in progress').tasks.push(t);
+    else if(s==='at risk') groups.find(g=>g.key==='at risk').tasks.push(t);
+    else groups.find(g=>g.key==='not started').tasks.push(t);
+  });
+
+  // Render panel header
+  document.getElementById('ws-panel-stripe').style.background = ws.color;
+  document.getElementById('ws-panel-title').textContent = ws.name;
+  document.getElementById('ws-panel-sub').textContent =
+    ws.owner + ' · ' + unique.length + ' tasks · ' +
+    groups.find(g=>g.key==='done').tasks.length + ' complete';
+
+  // Render groups
+  const body = document.getElementById('ws-panel-body');
+  body.innerHTML = groups.map((g,gi) => {
+    if(g.tasks.length === 0) return '';
+    const isNotStarted = g.key === 'not started';
+    const startCollapsed = isNotStarted && g.tasks.length > 5;
+
+    const taskHtml = g.tasks.map(t => {
+      const d = isDone(t);
+      const s = ss(t);
+      const who = (t.assignees||[]).map(a=>a.username||a.initials||'?').slice(0,2).join(', ');
+      const taskDt = t.due_date ? new Date(+t.due_date) : null;
+      if(taskDt) taskDt.setHours(0,0,0,0);
+      const isOver = !d && taskDt && taskDt < today;
+      const dueStr = taskDt ? taskDt.toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      const cls = d?'done':s==='blocked'?'blocked':isOver?'overdue':'';
+      return `<div class="ws-task ${cls}">
+        <div class="ws-task-dot" style="background:${g.color}"></div>
+        <div class="ws-task-body">
+          <div class="ws-task-name ${d?'done':''}">${t.name}</div>
+          <div class="ws-task-meta">
+            ${who?`<div class="ws-task-who">${who}</div>`:''}
+            ${dueStr?`<div class="ws-task-due ${isOver?'overdue':'upcoming'}">${isOver?'⚠ ':''}${dueStr}</div>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="ws-group">
+      <div class="ws-group-hdr" onclick="toggleGroup(this)">
+        <div class="ws-group-dot" style="background:${g.color}"></div>
+        <div class="ws-group-name">${g.label}</div>
+        <div class="ws-group-count">${g.tasks.length}</div>
+        <div class="ws-group-toggle ${startCollapsed?'collapsed':''}">▾</div>
+      </div>
+      <div class="ws-task-list ${startCollapsed?'collapsed':''}">${taskHtml}</div>
+    </div>`;
+  }).join('');
+
+  if(!body.innerHTML.trim()) body.innerHTML = '<div class="empty">No tasks assigned to this workstream yet</div>';
+
+  document.getElementById('ws-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
-async function liveRefresh(){
-  const btn = document.getElementById('btn-live');
-  btn.disabled = true;
-  btn.textContent = '⚡ Loading...';
-
-  document.getElementById('loading').style.display='flex';
-  document.getElementById('dashboard').style.display='none';
-  document.getElementById('ld-msg').textContent='Fetching live data from ClickUp...';
-
-  try {
-    // Fetch folders and lists
-    let folders = [];
-    try { const r=await cu('/space/'+SPACE_ID+'/folder?archived=false'); folders=r.folders||[]; } catch(e){}
-    let spaceLists = [];
-    try { const r=await cu('/space/'+SPACE_ID+'/list?archived=false'); spaceLists=r.lists||[]; } catch(e){}
-
-    const folderLists = [];
-    for(const f of folders){
-      try {
-        const r=await cu('/folder/'+f.id+'/list?archived=false');
-        (r.lists||[]).forEach(l=>{ l._folderId=f.id; folderLists.push(l); });
-      } catch(e){}
-    }
-
-    const allLists=[...spaceLists,...folderLists];
-    if(allLists.length===0) throw new Error('No lists found. Check TOKEN and SPACE_ID.');
-
-    const tasks=[], seen=new Set();
-    for(let i=0;i<allLists.length;i++){
-      const l=allLists[i];
-      document.getElementById('ld-msg').textContent='Live: '+(i+1)+'/'+allLists.length+': '+l.name+'...';
-      let pg=0;
-      try {
-        while(true){
-          const r=await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=true');
-          (r.tasks||[]).forEach(t=>{ if(!seen.has(t.id)){ seen.add(t.id); t._lid=l.id; tasks.push(t); } });
-          if((r.tasks||[]).length<100) break;
-          pg++;
-        }
-      } catch(e){}
-    }
-
-    if(tasks.length===0) throw new Error('No tasks returned. Check token permissions.');
-
-    allTasks = tasks;
-    render();
-    document.getElementById('loading').style.display='none';
-    document.getElementById('dashboard').style.display='block';
-    document.getElementById('h-ts').textContent='⚡ Live data — '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-  } catch(e) {
-    document.getElementById('loading').style.display='none';
-    document.getElementById('dashboard').style.display='block';
-    alert('Live refresh failed: '+e.message);
-  }
-
-  btn.disabled=false;
-  btn.textContent='⚡ Live';
+function closeWorkstream(e) {
+  if(e && e.target !== document.getElementById('ws-overlay')) return;
+  document.getElementById('ws-overlay').classList.remove('open');
+  document.body.style.overflow = '';
 }
+
+function toggleGroup(hdr) {
+  const list = hdr.nextElementSibling;
+  const toggle = hdr.querySelector('.ws-group-toggle');
+  list.classList.toggle('collapsed');
+  toggle.classList.toggle('collapsed');
+}
+
+// expose wsTaskMap globally so openWorkstream can use it
+let wsTaskMap = {};
 
 window.addEventListener('load',init);
 </script>
