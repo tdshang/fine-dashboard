@@ -1,0 +1,114 @@
+name: Refresh FINE Dashboard Data
+
+on:
+  schedule:
+    # Runs at 7:00 AM Central Time (12:00 UTC)
+    - cron: '0 12 * * *'
+  workflow_dispatch: # allows manual trigger from GitHub Actions tab
+
+jobs:
+  fetch-clickup-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Fetch ClickUp data and save to data.json
+        env:
+          CLICKUP_TOKEN: ${{ secrets.CLICKUP_TOKEN }}
+          SPACE_ID: '901313746539'
+        run: |
+          node << 'SCRIPT'
+          const https = require('https');
+          const fs = require('fs');
+
+          const TOKEN = process.env.CLICKUP_TOKEN;
+          const SPACE_ID = process.env.SPACE_ID;
+
+          function cuGet(path) {
+            return new Promise((resolve, reject) => {
+              const options = {
+                hostname: 'api.clickup.com',
+                path: '/api/v2' + path,
+                method: 'GET',
+                headers: { 'Authorization': TOKEN }
+              };
+              const req = https.request(options, res => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                  try { resolve(JSON.parse(data)); }
+                  catch(e) { reject(new Error('JSON parse error: ' + data.substring(0,200))); }
+                });
+              });
+              req.on('error', reject);
+              req.end();
+            });
+          }
+
+          async function fetchAll() {
+            console.log('Fetching folders...');
+            const { folders = [] } = await cuGet('/space/' + SPACE_ID + '/folder?archived=false');
+
+            console.log('Fetching folderless lists...');
+            const { lists: spaceLists = [] } = await cuGet('/space/' + SPACE_ID + '/list?archived=false');
+
+            const folderLists = [];
+            for (const f of folders) {
+              const { lists = [] } = await cuGet('/folder/' + f.id + '/list?archived=false');
+              lists.forEach(l => { l._folderId = f.id; });
+              folderLists.push(...lists);
+            }
+
+            const allLists = [...spaceLists, ...folderLists];
+            console.log('Total lists:', allLists.length);
+
+            const tasks = [];
+            const seen = new Set();
+
+            for (let i = 0; i < allLists.length; i++) {
+              const l = allLists[i];
+              console.log(`Fetching list ${i+1}/${allLists.length}: ${l.name}`);
+              let page = 0;
+              while (true) {
+                const { tasks: batch = [] } = await cuGet(
+                  '/list/' + l.id + '/task?page=' + page + '&include_closed=true&subtasks=true'
+                );
+                batch.forEach(t => {
+                  if (!seen.has(t.id)) {
+                    seen.add(t.id);
+                    t._lid = l.id;
+                    tasks.push(t);
+                  }
+                });
+                if (batch.length < 100) break;
+                page++;
+              }
+            }
+
+            console.log('Total tasks fetched:', tasks.length);
+            return tasks;
+          }
+
+          fetchAll().then(tasks => {
+            const output = {
+              fetchedAt: new Date().toISOString(),
+              taskCount: tasks.length,
+              tasks: tasks
+            };
+            fs.writeFileSync('data.json', JSON.stringify(output));
+            console.log('data.json written successfully with', tasks.length, 'tasks');
+          }).catch(err => {
+            console.error('FETCH FAILED:', err.message);
+            process.exit(1);
+          });
+          SCRIPT
+
+      - name: Commit and push data.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git diff --staged --quiet || git commit -m "chore: refresh dashboard data $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
