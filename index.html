@@ -296,6 +296,11 @@ body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(-
 <script>
 var TOKEN = 'pk_156056280_LDRARAWGYSYL46GQE85BE7HZ66U0DKXV';
 var SPACE_ID = '901313746539';
+// GitHub config for triggering the Actions workflow
+var GITHUB_OWNER = 'tdshang';
+var GITHUB_REPO = 'fine-dashboard';
+var GITHUB_TOKEN = 'pk_156056280_LDRARAWGYSYL46GQE85BE7HZ66U0DKXV'; // GitHub Personal Access Token (needs repo + actions scope)
+var GITHUB_WORKFLOW = 'fetch-data.yml';
 </script>
 
 <div id="loading">
@@ -433,32 +438,48 @@ var SPACE_ID = '901313746539';
 <script>
 const RETREAT = new Date('2026-07-28');
 
-// WORKSTREAM_FIELD_ID — the ClickUp custom field ID for the Workstream dropdown
-const WORKSTREAM_FIELD_ID = 'bde6b5f2-d0e0-4fe5-98d8-0ebf7d6c76b4';
-
-// Workstreams in project flow order — Phase 0 first, then build phases, then deployment
-// Only workstreams with at least 1 task will be shown on the dashboard
+// Workstream names must match EXACTLY what's in your ClickUp Workstream custom field dropdown
+// Order = project flow order (Phase 0 first through deployment last)
+// wsKey = exact name from ClickUp dropdown | listIds = fallback if custom field not set
 const WORKSTREAMS = [
-  // Phase 0 — active now
-  { name:'ENGAGE Documentation',    owner:'SMEs + Heather',  color:'#0f5096', optionIds:['a0b0e5ad-54c1-42de-8e18-82b2abb770de'] },
-  { name:'Asset Migration',         owner:'Sydney + Gabe',   color:'#D4A847', optionIds:['36f88d98-ce47-441d-ab63-e15e384be73e'] },
-  { name:'Project Oversight',       owner:'Tina + Vince',    color:'#0091ff', optionIds:['e1ed3449-50cc-4c06-97d8-e5bcbc22703e'] },
-  // Phase 1 — Sprint 0 Audit
-  { name:'Sprint 0 Audit',          owner:'Dylan + Team',    color:'#6647f0', optionIds:['4805e7e1-ee52-46c4-a722-c4ca972cf2be'] },
-  { name:'AI Avatars',              owner:'Jay Stiles',      color:'#2ABCB0', optionIds:['8cc148af-f85e-41c0-aa22-71f7f02da348'] },
-  // Phase 2 — Build (in sprint order)
-  { name:'Platform Integration',    owner:'Dylan Overby',    color:'#FF4081', optionIds:['dd2b27dc-1807-4197-9bb2-80dc39f00679'] },
-  { name:'K-12 Account Model',      owner:'Dylan Overby',    color:'#8dcec3', optionIds:['82b9f6a5-3bd4-448a-8518-9a7f2297d9f3'] },
-  { name:'Forms System',            owner:'Dylan Overby',    color:'#7C4DFF', optionIds:['f1064da5-0dfd-407f-b9fe-33f59f60e702'] },
-  { name:'Canvas LTI',              owner:'Dylan Overby',    color:'#b6b6ff', optionIds:['7927abc1-51ef-4e6f-b377-3a6b4277cdea'] },
-  { name:'COPPA/FERPA',             owner:'Tina + Dylan',    color:'#96c7f2', optionIds:['2d93cf84-e22d-4c21-a534-727fbacdde29'] },
-  { name:'Education Environments',  owner:'Asset Team',      color:'#E09828', optionIds:['39f0ccf5-b29c-4977-b537-bbc3d3f1217f'] },
-  { name:'Experience & ILE',        owner:'SMEs + Heather',  color:'#ffaa7d', optionIds:['8650597e-2888-4d54-98ec-0bf9546d74eb'] },
-  { name:'Web Companion',           owner:'Dylan Overby',    color:'#3e63dd', optionIds:['d0e07e0e-188e-459d-acd6-0ac37a6a7923'] },
-  { name:'Media Library',           owner:'Asset Team',      color:'#ab4aba', optionIds:['a28bc058-9665-45c3-84a5-3e33d0de6f92'] },
-  { name:'Analytics Layer',         owner:'Dylan + Tina',    color:'#30a46c', optionIds:['36ce420f-8bd6-45ed-996c-6a01fcc9cd19'] },
-  // Phase 3 — Training & Deployment (last)
-  { name:'Training',                owner:'SMEs + Tina',     color:'#1bfa0d', optionIds:['21bbcbd0-c6bf-4f99-a994-b666bdb3650c'] },
+  // Phase 0
+  { name:'ENGAGE Documentation',   wsKeys:['ENGAGE Documentation'], owner:'SMEs + Heather',     color:'#3e85c7',
+    listIds:['901326821482'] },
+  { name:'Asset Migration',         wsKeys:['Asset Migration'],   owner:'Sydney + Gabe',         color:'#D4A847',
+    listIds:['901326821483'] },
+  { name:'Project Oversight',       wsKeys:['Project Oversight'], owner:'Tina + Vince',          color:'#0091ff',
+    listIds:['901326821484','901326821493'] },
+  // Phase 1
+  { name:'Sprint 0 Audit',          wsKeys:[' Sprint 0 Audit','Sprint 0 Audit'], owner:'Dylan + Team', color:'#6647f0',
+    listIds:['901326821485','901326821486','901326821487','901326821488','901326821489','901326821490','901326821491','901326821492','901326821496','901326821498'] },
+  { name:'AI Avatars',              wsKeys:['AI Avatars'],        owner:'Jay + Tina + Jonathan', color:'#2ABCB0',
+    listIds:['901326821501'] },
+  // Phase 2 — Build
+  { name:'Platform Integration',   wsKeys:['Platform Integration'], owner:'Dylan Overby',       color:'#FF4081',
+    listIds:['901326821499'] },
+  { name:'K-12 Account Model',      wsKeys:['K-12 Account Model'], owner:'Dylan Overby',        color:'#8dcec3',
+    listIds:['901326821499'] },
+  { name:'Forms System',            wsKeys:['Forms System'],      owner:'Dylan Overby',          color:'#7C4DFF',
+    listIds:['901326821500'] },
+  { name:'Canvas LTI',              wsKeys:['Canvas LTI'],        owner:'Dylan Overby',          color:'#b6b6ff',
+    listIds:['901326821500'] },
+  { name:'COPPA/FERPA',             wsKeys:['COPPA/FERPA'],       owner:'Tina + Dylan',          color:'#96c7f2',
+    listIds:['901326821502'] },
+  { name:'Education Environments',  wsKeys:['Education Environments'], owner:'Asset Team',      color:'#E09828',
+    listIds:['901326821502'] },
+  { name:'Experience & ILE',        wsKeys:['Experience & ILE'],  owner:'SMEs + Heather',        color:'#ffaa7d',
+    listIds:['901326821501','901326821502','901326821503'] },
+  { name:'Web Companion',           wsKeys:['Web Companion'],     owner:'Dylan Overby',          color:'#3e63dd',
+    listIds:['901326821503'] },
+  { name:'Media Library',           wsKeys:['Media Library'],     owner:'Asset Team',            color:'#ab4aba',
+    listIds:['901326821503','901326821504'] },
+  { name:'Analytics Layer',         wsKeys:['Analytics Layer'],   owner:'Dylan + Tina',          color:'#30a46c',
+    listIds:['901326821503','901326821504'] },
+  // Phase 3
+  { name:'QA & Deployment',         wsKeys:['Analytics Layer','QA & Deployment'], owner:'Dylan + Tina', color:'#F0C96A',
+    listIds:['901326821506','901326821508'] },
+  { name:'Training',                wsKeys:['Training'],          owner:'SMEs + Tina',           color:'#27B97C',
+    listIds:['901326821507','901326821509'] },
 ];
 
 const TEAM = [
@@ -524,8 +545,14 @@ async function fetchTasks(){
     let pg = 0;
     try{
       while(true){
-        const r = await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=true&custom_fields=true');
+        const r = await cu('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=true');
+        // Check if API returned an error object instead of tasks
+        if(r.err || r.error){
+          console.warn('API error for list '+l.id+' ('+l.name+'): ', r.err||r.error);
+          break;
+        }
         const batch = r.tasks || [];
+        console.log('List '+l.name+' page '+pg+': '+batch.length+' tasks');
         batch.forEach(t=>{
           if(!seen.has(t.id)){
             seen.add(t.id);
@@ -541,7 +568,17 @@ async function fetchTasks(){
   }
 
   console.log('Total tasks fetched:', tasks.length);
-  if(tasks.length === 0) throw new Error('Lists found ('+allLists.length+') but no tasks returned. Open browser console (F12) for details.');
+  if(tasks.length === 0){
+    // Build a helpful diagnostic message
+    const listNames = allLists.map(l=>l.name).join(', ');
+    throw new Error(
+      'Lists found ('+allLists.length+') but all task fetches returned 0 tasks.\n\n'+
+      'Most likely cause: your API token does not have access to these lists, '+
+      'or the token has expired.\n\n'+
+      'Lists attempted: '+listNames+'\n\n'+
+      'Try generating a new API token at app.clickup.com/settings/apps'
+    );
+  }
   return tasks;
 }
 
@@ -607,32 +644,48 @@ function render(){
   set('d-pct',cp+'%');
   set('d-health',C.blocked>5?'⚠ Critical — blockers need immediate attention':C.blocked>0?'Active blockers — monitor closely':cp>75?'✓ On track for July 25':cp>30?'In progress — '+C.inprogress+' tasks active':'Getting started');
 
-  // ── WORKSTREAMS — read from custom field ─────────────────────────────────
-  // Build lookup: workstream optionId → tasks (populate global so openWorkstream can use it)
-  wsTaskMap = {};
+  // ── WORKSTREAMS — use _workstream field (from GitHub Actions enrichment) ───
+  // _workstream is set by the nightly fetch when custom fields are available
+  // Falls back to list ID mapping for live refresh where custom fields aren't fetched
+  wsTaskMap = {};  // keyed by workstream name AND list ID both
+
   allTasks.forEach(t => {
-    const wsField = (t.custom_fields||[]).find(f=>f.id===WORKSTREAM_FIELD_ID);
-    if(wsField && wsField.value) {
-      const optId = wsField.value.id || wsField.value;
-      if(!wsTaskMap[optId]) wsTaskMap[optId]=[];
-      wsTaskMap[optId].push(t);
+    // Primary: use workstream custom field value if available
+    if(t._workstream) {
+      const key = 'ws:' + t._workstream.trim();
+      if(!wsTaskMap[key]) wsTaskMap[key]=[];
+      wsTaskMap[key].push(t);
     }
+    // Always also index by list ID for fallback
+    const lkey = 'lid:' + t._lid;
+    if(!wsTaskMap[lkey]) wsTaskMap[lkey]=[];
+    wsTaskMap[lkey].push(t);
   });
 
+  // Determine if we have custom field data available
+  const hasWsData = allTasks.some(t => t._workstream);
+  console.log('Workstream custom field data available:', hasWsData);
+
   // Only show workstreams with at least 1 task assigned
-  const activeWorkstreams = WORKSTREAMS.filter(ws => {
-    const wt=[];
-    ws.optionIds.forEach(oid=>{ (wsTaskMap[oid]||[]).forEach(t=>wt.push(t)); });
-    return wt.length>0;
-  });
+  function getWsTasks(ws) {
+    const wt=[], seen=new Set();
+    const add = t => { if(!seen.has(t.id)){ seen.add(t.id); wt.push(t); } };
+    if(hasWsData && ws.wsKeys) {
+      // Use custom field data — accurate workstream separation
+      ws.wsKeys.forEach(key=>{ (wsTaskMap['ws:'+key.trim()]||[]).forEach(add); });
+    } else {
+      // Fall back to list ID mapping
+      ws.listIds.forEach(lid=>{ (wsTaskMap['lid:'+lid]||[]).forEach(add); });
+    }
+    return wt;
+  }
+
+  const activeWorkstreams = WORKSTREAMS.filter(ws => getWsTasks(ws).length > 0);
   set('ws-sb', activeWorkstreams.length+' active workstreams');
 
   document.getElementById('ws-grid').innerHTML=activeWorkstreams.map((ws)=>{
     const origIdx=WORKSTREAMS.indexOf(ws);
-    const wt=[];
-    ws.optionIds.forEach(oid=>{ (wsTaskMap[oid]||[]).forEach(t=>wt.push(t)); });
-    // deduplicate
-    const seen=new Set(); const unique=wt.filter(t=>seen.has(t.id)?false:(seen.add(t.id),true));
+    const unique = getWsTasks(ws);
     const done=unique.filter(isDone).length;
     const inp=unique.filter(t=>ss(t)==='in progress').length;
     const blk=unique.filter(t=>ss(t)==='blocked').length;
@@ -796,9 +849,7 @@ function openWorkstream(wsIdx) {
 
   // Collect tasks for this workstream
   const wt = [];
-  ws.optionIds.forEach(oid => { (wsTaskMap[oid]||[]).forEach(t=>wt.push(t)); });
-  const seen = new Set();
-  const unique = wt.filter(t=>seen.has(t.id)?false:(seen.add(t.id),true));
+  const unique = getWsTasks(ws);
 
   const now = Date.now();
   const today = new Date(); today.setHours(0,0,0,0);
@@ -896,54 +947,83 @@ function toggleGroup(hdr) {
 // expose wsTaskMap globally so openWorkstream can use it
 let wsTaskMap = {};
 
-// ── LIVE REFRESH ─────────────────────────────────────────────────────────
-function cuLive(path) {
-  return fetch('https://api.clickup.com/api/v2'+path,{headers:{Authorization:TOKEN}})
-    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
-}
-
+// ── LIVE REFRESH — triggers GitHub Action then reloads data.json ─────────
+// This ensures Live and overnight cache always use identical data (same fetch logic)
 async function liveRefresh(){
-  const btn=document.getElementById('btn-live');
-  btn.disabled=true; btn.textContent='⚡ Loading...';
-  document.getElementById('loading').style.display='flex';
-  document.getElementById('dashboard').style.display='none';
-  document.getElementById('ld-msg').textContent='Fetching live data from ClickUp...';
-  try{
-    const allLists=[];
-    for(const fid of KNOWN_FOLDER_IDS){
-      try{
-        const r=await cuLive('/folder/'+fid+'/list?archived=false');
-        (r.lists||[]).forEach(l=>{ l._folderId=fid; allLists.push(l); });
-      }catch(e){ console.warn('Live: failed folder '+fid, e.message); }
+  const btn = document.getElementById('btn-live');
+  btn.disabled = true;
+  btn.textContent = '⚡ Triggering...';
+
+  try {
+    // Step 1: Trigger the GitHub Actions workflow
+    const triggerResp = await fetch(
+      'https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/actions/workflows/'+GITHUB_WORKFLOW+'/dispatches',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + GITHUB_TOKEN,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ref: 'main' })
+      }
+    );
+
+    if (!triggerResp.ok) {
+      const err = await triggerResp.text();
+      throw new Error('GitHub trigger failed ('+triggerResp.status+'): ' + err);
     }
-    try{ const r=await cuLive('/space/'+SPACE_ID+'/list?archived=false'); (r.lists||[]).forEach(l=>allLists.push(l)); }catch(e){}
-    if(allLists.length===0) throw new Error('No lists found. Check token.');
-    const tasks=[]; const seen=new Set();
-    for(let i=0;i<allLists.length;i++){
-      const l=allLists[i];
-      document.getElementById('ld-msg').textContent='Live: '+(i+1)+'/'+allLists.length+': '+l.name+'...';
-      let pg=0;
-      try{
-        while(true){
-          const r=await cuLive('/list/'+l.id+'/task?page='+pg+'&include_closed=true&subtasks=true&custom_fields=true');
-          (r.tasks||[]).forEach(t=>{ if(!seen.has(t.id)){ seen.add(t.id); t._lid=l.id; tasks.push(t); } });
-          if((r.tasks||[]).length<100) break;
-          pg++;
+
+    // Step 2: Poll for the workflow run to complete
+    btn.textContent = '⚡ Running...';
+    document.getElementById('h-ts').textContent = 'Refresh triggered — fetching data...';
+
+    // Wait for workflow to start (GitHub needs a few seconds)
+    await new Promise(r => setTimeout(r, 5000));
+
+    // Poll until complete (max 3 minutes)
+    const startTime = Date.now();
+    const maxWait = 3 * 60 * 1000;
+    let runId = null;
+
+    while (Date.now() - startTime < maxWait) {
+      const runsResp = await fetch(
+        'https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/actions/workflows/'+GITHUB_WORKFLOW+'/runs?per_page=1',
+        { headers: { 'Authorization': 'Bearer '+GITHUB_TOKEN, 'Accept': 'application/vnd.github+json' } }
+      );
+      const runsData = await runsResp.json();
+      const run = runsData.workflow_runs?.[0];
+
+      if (!run) { await new Promise(r => setTimeout(r, 5000)); continue; }
+
+      runId = run.id;
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
+      btn.textContent = '⚡ ' + elapsed + 's...';
+
+      if (run.status === 'completed') {
+        if (run.conclusion !== 'success') {
+          throw new Error('Workflow completed but failed. Check GitHub Actions for details.');
         }
-      }catch(e){}
+        break; // Success — exit poll loop
+      }
+
+      await new Promise(r => setTimeout(r, 6000)); // Poll every 6 seconds
     }
-    if(tasks.length===0) throw new Error('No tasks returned.');
-    allTasks=tasks;
-    render();
-    document.getElementById('loading').style.display='none';
-    document.getElementById('dashboard').style.display='block';
-    document.getElementById('h-ts').textContent='⚡ Live — '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-  }catch(e){
-    document.getElementById('loading').style.display='none';
-    document.getElementById('dashboard').style.display='block';
-    alert('Live refresh failed: '+e.message);
+
+    if (Date.now() - startTime >= maxWait) {
+      throw new Error('Workflow is taking longer than expected. Try refreshing manually in a minute.');
+    }
+
+    // Step 3: Wait a moment for GitHub Pages to update, then reload data.json
+    await new Promise(r => setTimeout(r, 3000));
+    btn.textContent = '⚡ Loading...';
+    await init(); // Reload the dashboard from fresh data.json
+
+  } catch(e) {
+    alert('Live refresh failed: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '⚡ Live';
   }
-  btn.disabled=false; btn.textContent='⚡ Live';
 }
 
 window.addEventListener('load',init);
