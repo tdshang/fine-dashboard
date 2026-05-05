@@ -430,18 +430,6 @@ jobs:
               }
             }
 
-            // Productivity table (30 days)
-            const prodRows=TEAM_LIST.map(m=>{
-              const c=teamMap[m.email]||{completedMonth:0,workedOnTasks:0};
-              const total30=c.completedMonth+c.workedOnTasks;
-              return '<tr>'
-                +'<td><div class="t-person"><div class="t-av" style="background:'+avColor(m.initials)+'">'+m.initials+'</div><span>'+m.name+'</span></div></td>'
-                +'<td class="tc">'+c.completedMonth+'</td>'
-                +'<td class="tc">'+c.workedOnTasks+'</td>'
-                +'<td class="tc bold">'+total30+'</td>'
-                +'</tr>';
-            }).join('');
-
             // Blocked
             const blkHTML=blockedTasks.length===0?'<div class="empty-msg" style="color:#6bc97e">No blocked tasks</div>'
               :blockedTasks.map(t=>{
@@ -475,7 +463,7 @@ jobs:
               +'<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
               +'<style>'+getCSS()+'</style>\n'
               +'</head>\n<body>\n'
-              +getBody({fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,overdue,blocked,progW,ipW,atW,blW,nsW,donutSVG,personPieSVG,wsRowsHTML,dueHTML,workedHTML,completedHTML,completedTodayHTML,actHTML,prodRows,blkHTML,msHTML,wsCount:workstreams.length,dueCount:dueThisWeek.length,blkCount:blockedTasks.length,msCount:milestones.length,statusSegs,openByPerson})
+              +getBody({fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,overdue,blocked,progW,ipW,atW,blW,nsW,donutSVG,personPieSVG,wsRowsHTML,dueHTML,workedHTML,completedHTML,completedTodayHTML,actHTML,blkHTML,msHTML,wsCount:workstreams.length,dueCount:dueThisWeek.length,blkCount:blockedTasks.length,msCount:milestones.length,statusSegs,openByPerson})
               +'\n</body>\n</html>';
           }
 
@@ -577,7 +565,7 @@ jobs:
           }
 
           function getBody(d){
-            const {fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,overdue,blocked,progW,ipW,atW,blW,nsW,donutSVG,personPieSVG,wsRowsHTML,dueHTML,workedHTML,completedHTML,completedTodayHTML,actHTML,prodRows,blkHTML,msHTML,wsCount,dueCount,blkCount,msCount,statusSegs,openByPerson}=d;
+            const {fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,overdue,blocked,progW,ipW,atW,blW,nsW,donutSVG,personPieSVG,wsRowsHTML,dueHTML,workedHTML,completedHTML,completedTodayHTML,actHTML,blkHTML,msHTML,wsCount,dueCount,blkCount,msCount,statusSegs,openByPerson}=d;
 
             const pieLegend=openByPerson.map(([e,c])=>{
               const col=avColor(pIni(e));
@@ -675,14 +663,6 @@ jobs:
               +'<div class="row2">'
               +'<div class="card"><div class="card-title">Blocked Tasks <span>'+blkCount+'</span></div>'+blkHTML+'</div>'
               +'<div class="card"><div class="card-title">Milestones &amp; Gates <span>'+msCount+'</span></div>'+msHTML+'</div>'
-              +'</div>\n'
-
-              // Row 8: productivity table
-              +'<div class="card mb16">'
-              +'<div class="card-title">Productivity &#8212; Last 30 Days</div>'
-              +'<table class="team-table"><thead><tr>'
-              +'<th>Team Member</th><th class="tc">Tasks Completed</th><th class="tc">Worked On</th><th class="tc">Total Points</th>'
-              +'</tr></thead><tbody>'+prodRows+'</tbody></table>'
               +'</div>\n'
 
               +'</div>';
