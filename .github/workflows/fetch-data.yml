@@ -87,9 +87,23 @@ jobs:
 
           async function fetchAllTasks() {
             const allLists=[];
+            const seenFolders=new Set();
+            // Fetch ALL folders in the space dynamically
+            try{
+              const fr=await get('/space/'+SPACE+'/folder?archived=false');
+              const folders=fr.folders||[];
+              console.log('Folders found:'+folders.length);
+              for(const f of folders){
+                seenFolders.add(f.id);
+                try{const r=await get('/folder/'+f.id+'/list?archived=false');(r.lists||[]).forEach(l=>{l._folderId=f.id;allLists.push(l);});}catch(e){console.warn('folder '+f.id+':'+e.message);}
+              }
+            }catch(e){console.warn('space folders:'+e.message);}
+            // Fallback: hardcoded folders in case any missed
             for(const fid of KNOWN_FOLDERS){
+              if(seenFolders.has(fid))continue;
               try{const r=await get('/folder/'+fid+'/list?archived=false');(r.lists||[]).forEach(l=>{l._folderId=fid;allLists.push(l);});}catch(e){console.warn('folder '+fid+':'+e.message);}
             }
+            // Folderless lists at space level
             try{const r=await get('/space/'+SPACE+'/list?archived=false');(r.lists||[]).forEach(l=>allLists.push(l));}catch(e){}
             console.log('Lists:'+allLists.length);
             const tasks=[],seen=new Set();
@@ -192,7 +206,7 @@ jobs:
               const isDueWeek=!d&&dt>0&&tDt.getTime()>=todayTs&&tDt.getTime()<=weekEndTs;
               const upd=+t.date_updated||0;
               const closed=+t.date_closed||0;
-              const workedOn=!d&&upd>=weekStartTs;
+              const workedOn=upd>=weekStartTs;  // match ClickUp: all tasks touched this week
               const completedThisWeek=d&&closed>=weekStartTs;
               const completedMonth=d&&closed>=month30Ts;
               (t.assignees||[]).forEach(a=>{
@@ -211,7 +225,7 @@ jobs:
               });
             });
 
-            const workedThisWeek=Object.entries(teamMap).filter(([e,c])=>c.workedOn>0).sort((a,b)=>b[1].workedOn-a[1].workedOn);
+            const workedThisWeek=Object.entries(teamMap).filter(([e,c])=>c.workedOnTasks>0).sort((a,b)=>b[1].workedOnTasks-a[1].workedOnTasks);
             const completedByPerson=Object.entries(teamMap).filter(([e,c])=>c.completedThisWeek>0).sort((a,b)=>b[1].completedThisWeek-a[1].completedThisWeek);
             const openByPerson=Object.entries(teamMap).filter(([e,c])=>c.open>0).sort((a,b)=>b[1].open-a[1].open);
 
@@ -225,11 +239,13 @@ jobs:
             const blockedTasks=tasks.filter(t=>ss(t)==='blocked').slice(0,20);
             const milestones=tasks.filter(t=>/^[\u{1F3C1}\u{1F680}\u{1F393}]/u.test(t.name)).sort((a,b)=>(+a.due_date||0)-(+b.due_date||0));
             const todayActivity=tasks.filter(t=>(+t.date_updated||0)>=todayTs).sort((a,b)=>(+b.date_updated)-(+a.date_updated)).slice(0,12);
+            // Tasks completed today
+            const completedToday=tasks.filter(t=>isDone(t)&&(+t.date_closed||0)>=todayTs).sort((a,b)=>(+b.date_closed)-(+a.date_closed)).slice(0,20);
 
             const fetchedAt=new Date().toLocaleString('en-US',{timeZone:'America/Chicago',weekday:'long',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
 
             console.log('Rendering...');
-            const html=buildHTML({fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,atrisk,blocked,overdue,workstreams,teamMap,workedThisWeek,completedByPerson,openByPerson,dueThisWeek,blockedTasks,milestones,todayActivity,todayTs,weekStartTs});
+            const html=buildHTML({fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,atrisk,blocked,overdue,workstreams,teamMap,workedThisWeek,completedByPerson,openByPerson,dueThisWeek,blockedTasks,milestones,todayActivity,completedToday,todayTs,weekStartTs});
 
             fs.writeFileSync('index.html',html);
             console.log('Done');
@@ -274,7 +290,7 @@ jobs:
           }
 
           function buildHTML(d) {
-            const {fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,atrisk,blocked,overdue,workstreams,teamMap,workedThisWeek,completedByPerson,openByPerson,dueThisWeek,blockedTasks,milestones,todayActivity,todayTs,weekStartTs}=d;
+            const {fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,atrisk,blocked,overdue,workstreams,teamMap,workedThisWeek,completedByPerson,openByPerson,dueThisWeek,blockedTasks,milestones,todayActivity,completedToday,todayTs,weekStartTs}=d;
 
             // Workload by status donut
             const statusSegs=[
@@ -355,7 +371,7 @@ jobs:
               return '<div class="person-row">'
                 +'<div class="p-av" style="background:'+col+'">'+pIni(e)+'</div>'
                 +'<div class="p-name">'+esc(pFull(e))+'</div>'
-                +'<div class="p-val">'+c.workedOn+'</div>'
+                +'<div class="p-val">'+c.workedOnTasks+'</div>'
                 +'</div>';
             }).join('')||'<div class="empty-msg">No activity this week</div>';
 
@@ -368,6 +384,19 @@ jobs:
                 +'<div class="p-val green">'+c.completedThisWeek+'</div>'
                 +'</div>';
             }).join('')||'<div class="empty-msg">Nothing completed this week</div>';
+
+            // Completed today (matches ClickUp "Completed Today" widget)
+            const completedTodayHTML=completedToday.length===0?'<div class="empty-msg">No Results</div>'
+              :completedToday.map(t=>{
+                const who=(t.assignees||[]).map(a=>pFull(a.email||'')).filter(Boolean).slice(0,2).join(', ');
+                return '<div class="due-item">'
+                  +'<span class="sdot closed-dot"></span>'
+                  +'<div class="due-body">'
+                  +'<div class="due-name">'+esc(t.name)+'</div>'
+                  +'<div class="due-meta">'+esc(who)+'</div>'
+                  +'</div>'
+                  +'</div>';
+              }).join('');
 
             // Activity
             const actHTML=todayActivity.length===0?'<div class="empty-msg">No activity today</div>'
@@ -430,7 +459,7 @@ jobs:
               +'<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
               +'<style>'+getCSS()+'</style>\n'
               +'</head>\n<body>\n'
-              +getBody({fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,overdue,blocked,progW,ipW,atW,blW,nsW,donutSVG,personPieSVG,wsRowsHTML,dueHTML,workedHTML,completedHTML,actHTML,prodRows,blkHTML,msHTML,wsCount:workstreams.length,dueCount:dueThisWeek.length,blkCount:blockedTasks.length,msCount:milestones.length,statusSegs,openByPerson})
+              +getBody({fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,overdue,blocked,progW,ipW,atW,blW,nsW,donutSVG,personPieSVG,wsRowsHTML,dueHTML,workedHTML,completedHTML,completedTodayHTML,actHTML,prodRows,blkHTML,msHTML,wsCount:workstreams.length,dueCount:dueThisWeek.length,blkCount:blockedTasks.length,msCount:milestones.length,statusSegs,openByPerson})
               +'\n</body>\n</html>';
           }
 
@@ -531,7 +560,7 @@ jobs:
           }
 
           function getBody(d){
-            const {fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,overdue,blocked,progW,ipW,atW,blW,nsW,donutSVG,personPieSVG,wsRowsHTML,dueHTML,workedHTML,completedHTML,actHTML,prodRows,blkHTML,msHTML,wsCount,dueCount,blkCount,msCount,statusSegs,openByPerson}=d;
+            const {fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,overdue,blocked,progW,ipW,atW,blW,nsW,donutSVG,personPieSVG,wsRowsHTML,dueHTML,workedHTML,completedHTML,completedTodayHTML,actHTML,prodRows,blkHTML,msHTML,wsCount,dueCount,blkCount,msCount,statusSegs,openByPerson}=d;
 
             const pieLegend=openByPerson.slice(0,8).map(([e,c])=>{
               const col=avColor(pIni(e));
@@ -621,7 +650,7 @@ jobs:
               // Row 6: worked / completed / activity
               +'<div class="row3">'
               +'<div class="card"><div class="card-title">Worked On This Week</div>'+workedHTML+'</div>'
-              +'<div class="card"><div class="card-title">Completed This Week</div>'+completedHTML+'</div>'
+              +'<div class="card"><div class="card-title">Completed Today</div>'+completedTodayHTML+'</div>'
               +'<div class="card"><div class="card-title">Latest Activity</div>'+actHTML+'</div>'
               +'</div>\n'
 
