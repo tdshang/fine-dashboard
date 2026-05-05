@@ -317,7 +317,7 @@ jobs:
             // We'll use a simple bar based on status instead for now
 
             // Open tasks by person - pie
-            const personSegs=openByPerson.slice(0,8).map(([e,c])=>({label:pName(e),value:c.open,color:avColor(pIni(e))}));
+            const personSegs=openByPerson.map(([e,c])=>({label:pName(e),value:c.open,color:avColor(pIni(e))}));
             const personPieSVG='<svg width="200" height="200" viewBox="0 0 200 200">'
               +buildPieChart(personSegs,100,100,95)
               +'</svg>';
@@ -380,7 +380,7 @@ jobs:
             }).join('')||'<div class="empty-msg">No activity this week</div>';
 
             // Completed this week
-            const completedHTML=completedByPerson.slice(0,8).map(([e,c])=>{
+            const completedHTML=completedByPerson.map(([e,c])=>{
               const col=avColor(pIni(e));
               return '<div class="person-row">'
                 +'<div class="p-av" style="background:'+col+'">'+pIni(e)+'</div>'
@@ -579,7 +579,7 @@ jobs:
           function getBody(d){
             const {fetchedAt,daysToRetreat,completePct,total,complete,inprogress,notstarted,overdue,blocked,progW,ipW,atW,blW,nsW,donutSVG,personPieSVG,wsRowsHTML,dueHTML,workedHTML,completedHTML,completedTodayHTML,actHTML,prodRows,blkHTML,msHTML,wsCount,dueCount,blkCount,msCount,statusSegs,openByPerson}=d;
 
-            const pieLegend=openByPerson.slice(0,8).map(([e,c])=>{
+            const pieLegend=openByPerson.map(([e,c])=>{
               const col=avColor(pIni(e));
               return '<div class="cl-item">'
                 +'<div class="cl-dot-name"><div class="cl-dot" style="background:'+col+'"></div>'
