@@ -2,7 +2,7 @@ name: Refresh FINE Dashboard
 
 on:
   schedule:
-    - cron: '0 12 * * *'
+    - cron: '0 11 * * *'
   workflow_dispatch:
 
 permissions:
@@ -24,7 +24,7 @@ jobs:
           const TOKEN = process.env.CLICKUP_TOKEN;
           const SPACE = process.env.SPACE_ID;
           const WORKSTREAM_FIELD = 'bde6b5f2-d0e0-4fe5-98d8-0ebf7d6c76b4';
-          const RETREAT = new Date('2026-07-28');
+          const RETREAT = new Date('2026-07-19');
 
           const KNOWN_FOLDERS = ['901318021853','901318021854','901318021855','901318021857','901318021858'];
 
@@ -561,7 +561,7 @@ jobs:
               +'<div class="countdown-num">'+daysToRetreat+'</div>'
               +'<div class="countdown-label">days to retreat</div>'
               +'<div class="countdown-sub">Teacher Training</div>'
-              +'<div class="countdown-date">July 28&#8211;31, 2026</div>'
+              +'<div class="countdown-date">July 19&#8211;22, 2026</div>'
               +'</div>'
               +'</div>\n'
 
